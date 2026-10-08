@@ -140,4 +140,5 @@ cython_debug/
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Python
 
 #Custom ignores
-.data/
+.idea/
+/data/2019-Nov.csv
