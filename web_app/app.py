@@ -3,7 +3,10 @@ from datetime import datetime, timezone
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 
+from .schemas import PushTransactionRequest, QueueRequest
 from .structures import Queue, Stack
+
+from pydantic import ValidationError
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///banking.db"
@@ -26,21 +29,41 @@ class OperationLog(db.Model):
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", queue=client_queue.items, stack=transaction_stack.items)
 
 
 @app.post("/api/queue")
 def enqueue_client():
-    value = request.json.get("value")
-    client_queue.enqueue(value)
-    return jsonify({"value": value}), 201
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
+
+    try:
+        payload = QueueRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return jsonify({
+            "error": "Invalid request",
+            "details": e.errors(include_input=False)
+        }), 400
+
+    client_queue.enqueue(payload.value)
+    return jsonify({"value": payload.value}), 201
 
 
 @app.post("/api/transactions")
 def push_transaction():
-    value = request.json.get("value")
-    transaction_stack.push(value)
-    return jsonify({"value": value}), 201
+    if not request.is_json:
+        return jsonify({"error": "Content-Type must be application/json"}), 415
+
+    try:
+        payload = PushTransactionRequest.model_validate(request.get_json())
+    except ValidationError as e:
+        return jsonify({
+            "error": "Invalid request",
+            "details": e.errors(include_input=False)
+        }), 400
+
+    transaction_stack.push(payload.value)
+    return jsonify({"value": payload.value}), 201
 
 
 with app.app_context():
