@@ -7,12 +7,25 @@ DEFAULT_CLEANED_DATA_PATH = Path("data/cleaned/2019-Nov.csv")
 
 
 def clean_data(data: pd.DataFrame) -> pd.DataFrame:
-    """Remove duplicates and fill missing categorical values."""
+    """Remove duplicates and handle missing values."""
     cleaned = data.drop_duplicates().copy()
 
+    if "event_time" in cleaned.columns:
+        cleaned["event_time"] = pd.to_datetime(
+            cleaned["event_time"],
+            errors="coerce",
+        )
+
     for column in ("brand", "category_code"):
-        if column in cleaned:
+        if column in cleaned.columns:
             cleaned[column] = cleaned[column].fillna("Unknown")
+
+    required_columns = [
+        column
+        for column in ("user_id", "product_id", "price")
+        if column in cleaned.columns
+    ]
+    cleaned = cleaned.dropna(subset=required_columns)
 
     return cleaned
 
