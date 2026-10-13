@@ -68,6 +68,13 @@ def test_load_data_rejects_csv_without_required_columns(tmp_path):
         load_data(csv_path)
 
 
+def test_load_data_rejects_missing_file(tmp_path):
+    missing_path = tmp_path / "missing.csv"
+
+    with pytest.raises(FileNotFoundError, match="missing.csv"):
+        load_data(missing_path)
+
+
 def test_load_data_uses_cleaned_default_data_when_available(tmp_path):
     raw_path = tmp_path / "raw.csv"
     cleaned_path = tmp_path / "cleaned.csv"

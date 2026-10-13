@@ -20,6 +20,7 @@ REQUIRED_COLUMNS = {
 def load_data(
     path: str | Path | None = None,
     rows: int | None = None,
+    usecols: list[str] | None = None,
     cleaned_path: str | Path = DEFAULT_CLEANED_DATA_PATH,
 ) -> pd.DataFrame:
     """Load validated event data, preferring the cleaned default dataset."""
@@ -29,7 +30,13 @@ def load_data(
     if path is None and cache_path.exists():
         source_path = cache_path
 
-    df = pd.read_csv(source_path, nrows=rows)
+    if not source_path.exists():
+        raise FileNotFoundError(f"CSV file not found: {source_path}")
+
+    if not source_path.is_file():
+        raise FileNotFoundError(f"CSV path is not a file: {source_path}")
+
+    df = pd.read_csv(source_path, nrows=rows, usecols=usecols)
 
     missing_columns = REQUIRED_COLUMNS - set(df.columns)
 
