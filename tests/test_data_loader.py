@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from ml_pipeline.data_loader import load_data
+from ml_pipeline.data_loader import REQUIRED_COLUMNS, load_data
 
 
 def create_csv(path, data):
@@ -16,12 +16,16 @@ def test_load_data_reads_csv(tmp_path):
             "event_type": ["view", "purchase"],
             "user_id": [101, 102],
             "event_time": ["2019-11-01 10:00:00", "2019-11-01 10:05:00"],
+            "product_id": [1001, 1002],
+            "category_code": ["electronics", "audio"],
+            "brand": ["Brand A", "Brand B"],
+            "price": [100.0, 200.0],
         },
     )
 
     result = load_data(csv_path)
 
-    assert list(result.columns) == ["event_type", "user_id", "event_time"]
+    assert REQUIRED_COLUMNS.issubset(result.columns)
     assert len(result) == 2
     assert result["event_type"].tolist() == ["view", "purchase"]
 
@@ -34,6 +38,10 @@ def test_load_data_limits_number_of_rows(tmp_path):
             "event_type": ["view", "cart", "purchase"],
             "user_id": [101, 102, 103],
             "event_time": ["t1", "t2", "t3"],
+            "product_id": [1001, 1002, 1003],
+            "category_code": ["electronics", "audio", "electronics"],
+            "brand": ["Brand A", "Brand B", "Brand A"],
+            "price": [100.0, 200.0, 300.0],
         },
     )
 
