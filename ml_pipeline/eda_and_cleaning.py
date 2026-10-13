@@ -1,4 +1,9 @@
+from pathlib import Path
+
 import pandas as pd
+
+
+DEFAULT_CLEANED_DATA_PATH = Path("data/cleaned/2019-Nov.csv")
 
 
 def clean_data(data: pd.DataFrame) -> pd.DataFrame:
@@ -10,6 +15,17 @@ def clean_data(data: pd.DataFrame) -> pd.DataFrame:
             cleaned[column] = cleaned[column].fillna("Unknown")
 
     return cleaned
+
+
+def save_cleaned_data(
+    data: pd.DataFrame,
+    path: str | Path = DEFAULT_CLEANED_DATA_PATH,
+) -> Path:
+    """Save cleaned event data and create its parent directory if needed."""
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    data.to_csv(output_path, index=False)
+    return output_path
 
 
 def summarize_events(data: pd.DataFrame) -> pd.DataFrame:
