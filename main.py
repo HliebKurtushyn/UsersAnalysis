@@ -1,6 +1,6 @@
 import pandas as pd
 
-df = pd.read_csv('data/2019-Nov.csv', nrows=1000000)
+df = pd.read_csv("data/2019-Nov.csv", nrows=1000000)
 
 # print(df.columns.tolist())
 # print(df.info())
@@ -31,8 +31,8 @@ duplicates = df.duplicated().sum()
 print(f"Duplicates after removal: {duplicates}")
 
 print("\nNull cleaning..")
-df.brand = df.brand.fillna('Unknown')
-df.category_code = df.category_code.fillna('Unknown')
+df.brand = df.brand.fillna("Unknown")
+df.category_code = df.category_code.fillna("Unknown")
 print("Finished")
 
 print("\nNull analysis after cleaning")
