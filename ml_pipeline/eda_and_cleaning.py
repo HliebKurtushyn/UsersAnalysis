@@ -22,7 +22,7 @@ def clean_data(data: pd.DataFrame) -> pd.DataFrame:
 
     required_columns = [
         column
-        for column in ("user_id", "product_id", "price")
+        for column in ("user_id", "product_id", "price", "event_type")
         if column in cleaned.columns
     ]
     cleaned = cleaned.dropna(subset=required_columns)
@@ -37,7 +37,9 @@ def save_cleaned_data(
     """Save cleaned event data and create its parent directory if needed."""
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     data.to_csv(output_path, index=False)
+
     return output_path
 
 
