@@ -71,3 +71,34 @@ def cluster_users(
             "cluster": labels,
         }
     )
+
+
+def cluster_products(
+    product_ids: pd.Series,
+    features: pd.DataFrame,
+    clusters: int = 4,
+) -> pd.DataFrame:
+    """Scale product features and assign products to KMeans clusters."""
+    if features.empty:
+        raise ValueError("Features must not be empty.")
+
+    if len(product_ids) != len(features):
+        raise ValueError("product_ids and features must have the same length.")
+
+    if not 1 <= clusters <= len(features):
+        raise ValueError("clusters must be between 1 and the number of products.")
+
+    scaled_features = StandardScaler().fit_transform(features)
+
+    labels = KMeans(
+        n_clusters=clusters,
+        random_state=42,
+        n_init=10,
+    ).fit_predict(scaled_features)
+
+    return pd.DataFrame(
+        {
+            "product_id": product_ids.to_numpy(),
+            "cluster": labels,
+        }
+    )
