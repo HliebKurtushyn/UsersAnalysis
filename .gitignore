@@ -148,3 +148,4 @@ cython_debug/
 # Temporary
 notes
 project_plan.pdf
+main.py
