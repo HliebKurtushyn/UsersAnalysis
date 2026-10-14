@@ -1,39 +1,20 @@
-import pandas as pd
+"""
+Цей файл використовується для експериментів, ручного тестування для наочного результату тощо.
+"""
 
-df = pd.read_csv("data/2019-Nov.csv", nrows=1000000)
+from ml_pipeline.clustering import find_optimal_clusters
+from ml_pipeline.data_loader import load_data
+from ml_pipeline.feature_engineering import build_user_features
+from ml_pipeline.prepare_data import prepare_data
 
-# print(df.columns.tolist())
-# print(df.info())
-# print(df.describe())
 
-print("--Analysis--")
+def main() -> None:
+    prepare_data(rows=10000)
+    data = load_data()
+    user_features = build_user_features(data)
+    features = user_features[["views", "carts", "purchases"]]
+    print(find_optimal_clusters(features, max_clusters=10))
 
-print("\nEvent types")
-event_types = df.event_type.value_counts()
-print(event_types)
 
-print("\nEvent percentage")
-event_percentage = df.event_type.value_counts(normalize=True) * 100
-print(event_percentage)
-
-print("\nEvent summary")
-event_summary = pd.DataFrame([event_types, event_percentage])
-print(event_summary)
-
-print("\nNull analysis")
-print(df.isnull().sum() / len(df) * 100)
-
-duplicates = df.duplicated().sum()
-print(f"\nDuplicates before removal: {duplicates}")
-if duplicates > 0:
-    df = df.drop_duplicates().reset_index(drop=True)
-duplicates = df.duplicated().sum()
-print(f"Duplicates after removal: {duplicates}")
-
-print("\nNull cleaning..")
-df.brand = df.brand.fillna("Unknown")
-df.category_code = df.category_code.fillna("Unknown")
-print("Finished")
-
-print("\nNull analysis after cleaning")
-print(df.isnull().sum() / len(df) * 100)
+if __name__ == "__main__":
+    main()
