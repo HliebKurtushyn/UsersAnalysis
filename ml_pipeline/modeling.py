@@ -57,3 +57,11 @@ def evaluate_model(features: pd.DataFrame) -> dict[str, float]:
         "recall": recall_score(y_test, y_pred),
         "f1": f1_score(y_test, y_pred),
     }
+
+
+def check_class_balance(target: pd.Series) -> dict[str, pd.Series]:
+    """Check the balance of classes in the target variable and return the counts and ratios."""
+    class_counts = target.value_counts()
+    class_ratios = target.value_counts(normalize=True)
+
+    return {"class_counts": class_counts, "class_ratios": class_ratios}
