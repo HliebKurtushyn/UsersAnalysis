@@ -2,7 +2,11 @@ import pandas as pd
 import pytest
 
 import ml_pipeline.clustering as clustering_module
-from ml_pipeline.clustering import cluster_users, find_optimal_clusters
+from ml_pipeline.clustering import (
+    cluster_products,
+    cluster_users,
+    find_optimal_clusters,
+)
 
 
 @pytest.fixture
@@ -123,4 +127,35 @@ def test_cluster_users_rejects_invalid_cluster_count(clusters, user_features):
             pd.Series([101, 202, 303, 404]),
             user_features,
             clusters=clusters,
+        )
+
+
+def test_cluster_products_returns_product_ids_and_labels(user_features):
+    product_ids = pd.Series([1001, 2002, 3003, 4004])
+
+    result = cluster_products(product_ids, user_features, clusters=2)
+
+    assert result.columns.tolist() == ["product_id", "cluster"]
+    assert result["product_id"].tolist() == [1001, 2002, 3003, 4004]
+    assert len(result["cluster"].unique()) == 2
+
+
+def test_cluster_products_rejects_mismatched_input_lengths(user_features):
+    with pytest.raises(ValueError, match="same length"):
+        cluster_products(
+            pd.Series([1001]),
+            user_features,
+            clusters=1,
+        )
+
+
+def test_cluster_products_rejects_invalid_cluster_count(user_features):
+    with pytest.raises(
+        ValueError,
+        match="between 1 and the number of products",
+    ):
+        cluster_products(
+            pd.Series([1001, 2002, 3003, 4004]),
+            user_features,
+            clusters=5,
         )
