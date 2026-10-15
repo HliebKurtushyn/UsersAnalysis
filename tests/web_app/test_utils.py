@@ -11,7 +11,7 @@ def test_validate_json_request_returns_validated_payload():
     with app.test_request_context(
         "/api/queue",
         method="POST",
-        json={"value": "222"},
+        json={"user_id": "user-1", "value": "222"},
     ):
         result = validate_json_request(request, QueueRequest)
 

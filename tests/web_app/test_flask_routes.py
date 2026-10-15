@@ -16,7 +16,10 @@ def setup_function():
 def test_enqueue_client():
     client = app.test_client()
 
-    response = client.post("/api/queue", json={"value": "222"})
+    response = client.post(
+        "/api/queue",
+        json={"user_id": "user-1", "value": "222"},
+    )
 
     assert response.status_code == 201
     assert response.get_json() == {"value": "222"}
@@ -26,7 +29,10 @@ def test_enqueue_client():
 def test_push_transaction():
     client = app.test_client()
 
-    response = client.post("/api/transactions", json={"value": "222"})
+    response = client.post(
+        "/api/transactions",
+        json={"user_id": "user-1", "value": "222"},
+    )
 
     assert response.status_code == 201
     assert response.get_json() == {"value": "222"}

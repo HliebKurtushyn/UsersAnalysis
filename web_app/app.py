@@ -28,6 +28,20 @@ class OperationLog(db.Model):
     description = db.Column(db.String(255))
 
 
+def log_operation(user_id, structure, operation_type, value, description):
+    """Log an operation performed on a structure."""
+    log = OperationLog(
+        user_id=user_id,
+        structure=structure,
+        operation_type=operation_type,
+        value=str(value),
+        description=description,
+    )
+
+    db.session.add(log)
+    db.session.commit()
+
+
 @app.get("/")
 def index():
     return render_template(
@@ -43,6 +57,14 @@ def enqueue_client():
 
     client_queue.enqueue(payload.value)
 
+    log_operation(
+        user_id=payload.user_id,
+        structure="queue",
+        operation_type="enqueue",
+        value=payload.value,
+        description=f"Added {payload.value} to queue",
+    )
+
     return jsonify({"value": payload.value}), HTTPStatus.CREATED
 
 
@@ -53,6 +75,14 @@ def dequeue_client():
         return payload
 
     client_queue.dequeue()
+
+    log_operation(
+        user_id=payload.user_id,
+        structure="queue",
+        operation_type="dequeue",
+        value=payload.value,
+        description=f"Added {payload.value} to queue",
+    )
 
     return jsonify({"value": payload.value}), HTTPStatus.OK
 
@@ -65,6 +95,14 @@ def push_transaction():
 
     transaction_stack.push(payload.value)
 
+    log_operation(
+        user_id=payload.user_id,
+        structure="stack",
+        operation_type="push",
+        value=payload.value,
+        description=f"Added {payload.value} to queue",
+    )
+
     return jsonify({"value": payload.value}), HTTPStatus.CREATED
 
 
@@ -75,6 +113,14 @@ def pop_transaction():
         return payload
 
     transaction_stack.pop()
+
+    log_operation(
+        user_id=payload.user_id,
+        structure="stack",
+        operation_type="pop",
+        value=payload.value,
+        description=f"Added {payload.value} to queue",
+    )
 
     return jsonify({"value": payload.value}), HTTPStatus.OK
 
