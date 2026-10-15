@@ -30,3 +30,22 @@ def validate_json_request(
         )
 
     return payload
+
+
+def validate_query_params(
+    request,
+    QueryModel: type[pydantic.BaseModel],
+):
+    """Validate query parameters and return a parsed payload."""
+    try:
+        return QueryModel.model_validate(request.args.to_dict())
+    except ValidationError as e:
+        return (
+            jsonify(
+                {
+                    "error": "Invalid query parameters",
+                    "details": e.errors(include_input=False),
+                }
+            ),
+            HTTPStatus.BAD_REQUEST,
+        )
