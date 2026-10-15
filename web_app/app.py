@@ -6,8 +6,8 @@ from flask_sqlalchemy import SQLAlchemy
 
 from .schemas import PushTransactionRequest, QueueRequest
 from .structures import Queue, Stack
+from .utils import validate_json_request
 
-from pydantic import ValidationError
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///banking.db"
@@ -37,38 +37,46 @@ def index():
 
 @app.post("/api/queue")
 def enqueue_client():
-    if not request.is_json:
-        return jsonify(
-            {"error": "Content-Type must be application/json"}
-        ), HTTPStatus.UNSUPPORTED_MEDIA_TYPE
-
-    try:
-        payload = QueueRequest.model_validate(request.get_json())
-    except ValidationError as e:
-        return jsonify(
-            {"error": "Invalid request", "details": e.errors(include_input=False)}
-        ), HTTPStatus.BAD_REQUEST
+    payload = validate_json_request(request, QueueRequest)
+    if isinstance(payload, tuple):
+        return payload
 
     client_queue.enqueue(payload.value)
+
     return jsonify({"value": payload.value}), HTTPStatus.CREATED
+
+
+@app.delete("/api/queue/dequeue")
+def dequeue_client():
+    payload = validate_json_request(request, QueueRequest)
+    if isinstance(payload, tuple):
+        return payload
+
+    client_queue.dequeue()
+
+    return jsonify({"value": payload.value}), HTTPStatus.OK
 
 
 @app.post("/api/transactions")
 def push_transaction():
-    if not request.is_json:
-        return jsonify(
-            {"error": "Content-Type must be application/json"}
-        ), HTTPStatus.UNSUPPORTED_MEDIA_TYPE
-
-    try:
-        payload = PushTransactionRequest.model_validate(request.get_json())
-    except ValidationError as e:
-        return jsonify(
-            {"error": "Invalid request", "details": e.errors(include_input=False)}
-        ), HTTPStatus.BAD_REQUEST
+    payload = validate_json_request(request, PushTransactionRequest)
+    if isinstance(payload, tuple):
+        return payload
 
     transaction_stack.push(payload.value)
+
     return jsonify({"value": payload.value}), HTTPStatus.CREATED
+
+
+@app.get("/api/transactions/pop")
+def pop_transaction():
+    payload = validate_json_request(request, PushTransactionRequest)
+    if isinstance(payload, tuple):
+        return payload
+
+    transaction_stack.pop()
+
+    return jsonify({"value": payload.value}), HTTPStatus.OK
 
 
 with app.app_context():
