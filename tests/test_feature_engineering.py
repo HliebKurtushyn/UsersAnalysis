@@ -1,7 +1,10 @@
 import pandas as pd
 import pytest
 
-from ml_pipeline.feature_engeneering import build_user_features
+from ml_pipeline.feature_engineering import (
+    build_product_features,
+    build_user_features,
+)
 
 
 def test_build_user_features_aggregates_events_by_user():
@@ -51,3 +54,28 @@ def test_build_user_features_rejects_missing_required_columns():
 
     with pytest.raises(ValueError, match="user_id"):
         build_user_features(data)
+
+
+def test_build_product_features_aggregates_events_by_product():
+    data = pd.DataFrame(
+        {
+            "product_id": [1001, 1001, 1001, 2002, 2002],
+            "event_type": ["view", "view", "purchase", "view", "cart"],
+        }
+    )
+
+    result = build_product_features(data).set_index("product_id")
+
+    assert result.loc[1001, "views"] == 2
+    assert result.loc[1001, "carts"] == 0
+    assert result.loc[1001, "purchases"] == 1
+    assert result.loc[2002, "views"] == 1
+    assert result.loc[2002, "carts"] == 1
+    assert result.loc[2002, "purchases"] == 0
+
+
+def test_build_product_features_rejects_missing_product_id():
+    data = pd.DataFrame({"event_type": ["view"]})
+
+    with pytest.raises(ValueError, match="product_id"):
+        build_product_features(data)

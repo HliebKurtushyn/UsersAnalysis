@@ -144,7 +144,9 @@ cython_debug/
 *.db
 *.sqlite3
 *.csv
+*joblib
 
 # Temporary
 notes
 project_plan.pdf
+main.py

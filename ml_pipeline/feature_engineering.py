@@ -8,9 +8,12 @@ EVENT_FEATURES = {
 }
 
 
-def build_user_features(data: pd.DataFrame) -> pd.DataFrame:
-    """Build one feature row for every user."""
-    required_columns = {"user_id", "event_type"}
+def _build_entity_features(
+    data: pd.DataFrame,
+    entity_column: str,
+) -> pd.DataFrame:
+    """Build event-count features for a user or product identifier."""
+    required_columns = {entity_column, "event_type"}
 
     missing_columns = required_columns - set(data.columns)
     if missing_columns:
@@ -22,7 +25,7 @@ def build_user_features(data: pd.DataFrame) -> pd.DataFrame:
     events["value"] = 1
 
     features = events.pivot_table(
-        index="user_id",
+        index=entity_column,
         columns="feature",
         values="value",
         aggfunc="sum",
@@ -33,4 +36,14 @@ def build_user_features(data: pd.DataFrame) -> pd.DataFrame:
         if column not in features:
             features[column] = 0
 
-    return features[["user_id", "views", "carts", "purchases"]]
+    return features.reset_index()[[entity_column, "views", "carts", "purchases"]]
+
+
+def build_user_features(data: pd.DataFrame) -> pd.DataFrame:
+    """Build one feature row for every user."""
+    return _build_entity_features(data, "user_id")
+
+
+def build_product_features(data: pd.DataFrame) -> pd.DataFrame:
+    """Build one feature row for every product."""
+    return _build_entity_features(data, "product_id")
