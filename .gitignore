@@ -141,4 +141,12 @@ cython_debug/
 
 #Custom ignores
 .idea/
-/data/2019-Nov.csv
+*.db
+*.sqlite3
+*.csv
+*joblib
+
+# Temporary
+notes
+project_plan.pdf
+main.py
