@@ -4,9 +4,9 @@ from http import HTTPStatus
 from flask import Flask, jsonify, render_template, request
 from flask_sqlalchemy import SQLAlchemy
 
-from .schemas import PushTransactionRequest, QueueRequest
+from .schemas import PushTransactionRequest, QueueRequest, QueueQuery, TransactionsQuery
 from .structures import Queue, Stack
-from .utils import validate_json_request
+from .utils import validate_json_request, validate_query_params
 
 
 app = Flask(__name__)
@@ -77,6 +77,34 @@ def pop_transaction():
     transaction_stack.pop()
 
     return jsonify({"value": payload.value}), HTTPStatus.OK
+
+
+@app.get("/api/queue")
+def get_queue():
+    params = validate_query_params(request, QueueQuery)
+
+    if isinstance(params, tuple):
+        return params
+
+    items = client_queue.items
+    if params.limit is not None:
+        items = items[: params.limit]
+
+    return jsonify({"items": items}), HTTPStatus.OK
+
+
+@app.get("/api/transactions")
+def get_transactions():
+    params = validate_query_params(request, TransactionsQuery)
+
+    if isinstance(params, tuple):
+        return params
+
+    items = transaction_stack.items
+    if params.limit is not None:
+        items = items[: params.limit]
+
+    return jsonify({"items": items}), HTTPStatus.OK
 
 
 with app.app_context():
