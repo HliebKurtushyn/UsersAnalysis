@@ -7,4 +7,3 @@ pydantic
 pre-commit
 joblib
 matplotlib
-Flask-API
