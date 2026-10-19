@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -45,6 +47,13 @@ class TransactionsQuery(BaseModel):
     """WIP: More detailed description of the query parameters soon."""
 
     limit: int | None = Field(default=None, gt=0)
+
+
+class LogsQuery(BaseModel):
+    """Query parameters for operation log filtering."""
+
+    user_id: str | None = Field(default=None, min_length=1, max_length=100)
+    operation_type: Literal["enqueue", "dequeue", "push", "pop", "undo"] | None = None
 
 
 class PrepareDataRequest(BaseModel):

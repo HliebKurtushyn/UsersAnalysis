@@ -8,6 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from ml_pipeline.recommender import top_products
 from ml_pipeline.prepare_data import prepare_data
 from ml_pipeline.train import CLEANED_DATA_PATH, RAW_DATA_PATH, train
+from pydantic import ValidationError
 
 from .config import Config
 from .schemas import (
@@ -15,6 +16,7 @@ from .schemas import (
     PrepareDataRequest,
     QueueQuery,
     QueueRequest,
+    LogsQuery,
     StructureOperationRequest,
     TransactionsQuery,
 )
@@ -406,7 +408,29 @@ def get_transactions():
 
 @app.get("/api/logs")
 def get_operation_logs():
-    logs = OperationLog.query.order_by(OperationLog.timestamp.desc()).all()
+    query_params = {
+        key: value for key, value in request.args.to_dict().items() if value.strip()
+    }
+    try:
+        params = LogsQuery.model_validate(query_params)
+    except ValidationError as error:
+        return (
+            jsonify(
+                {
+                    "error": "Invalid query parameters",
+                    "details": error.errors(include_input=False),
+                }
+            ),
+            HTTPStatus.BAD_REQUEST,
+        )
+
+    query = OperationLog.query
+    if params.user_id is not None:
+        query = query.filter_by(user_id=params.user_id)
+    if params.operation_type is not None:
+        query = query.filter_by(operation_type=params.operation_type)
+
+    logs = query.order_by(OperationLog.timestamp.desc()).all()
     return jsonify(
         {
             "items": [
