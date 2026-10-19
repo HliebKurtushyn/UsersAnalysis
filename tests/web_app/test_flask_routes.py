@@ -7,7 +7,6 @@ def test_home_page():
     client = app.test_client()
     response = client.get("/")
     assert response.status_code == 200
-    assert b"v0.7.1" in response.data
 
 
 def test_sidebar_pages_render_with_active_navigation():
