@@ -97,7 +97,14 @@ function renderLogs(items) {
 }
 
 async function refreshLogs() {
-  const response = await fetch("/api/logs");
+  const filters = document.querySelector("[data-log-filters]");
+  const params = filters
+    ? new URLSearchParams(
+        [...new FormData(filters)].filter(([, value]) => value.trim()),
+      )
+    : null;
+  const query = params ? `?${params.toString()}` : "";
+  const response = await fetch(`/api/logs${query}`);
   if (!response.ok) throw new Error("Не вдалося завантажити журнал.");
   renderLogs((await response.json()).items);
 }
@@ -133,6 +140,17 @@ document.querySelectorAll(".operation-form").forEach((form) => {
 
 document.querySelector("[data-refresh-logs]")?.addEventListener("click", () => {
   refreshLogs().catch((error) => showMessage("logs", error.message, true));
+});
+
+document.querySelector("[data-log-filters]")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  refreshLogs().catch((error) => showMessage("logs", error.message, true));
+});
+
+document.querySelector("[data-log-filters]")?.addEventListener("reset", () => {
+  window.setTimeout(() => {
+    refreshLogs().catch((error) => showMessage("logs", error.message, true));
+  }, 0);
 });
 
 Promise.all([refreshStructures(), refreshLogs()]).catch((error) => {
