@@ -268,8 +268,10 @@ def test_get_operation_logs_returns_newest_logs_first():
     assert len(logs) == 2
     assert logs[0]["value"] == "second"
     assert logs[0]["structure"] == "stack"
+    assert logs[0]["is_undone"] is False
     assert logs[1]["value"] == "first"
     assert logs[1]["structure"] == "queue"
+    assert logs[1]["is_undone"] is False
 
 
 def test_dequeue_returns_and_logs_actual_queue_value():
@@ -300,3 +302,128 @@ def test_pop_returns_not_found_for_empty_stack():
 
     assert response.status_code == 404
     assert response.get_json() == {"error": "Stack is empty"}
+
+
+def test_undo_enqueue_removes_value_from_queue():
+    client = app.test_client()
+
+    # Enqueue a value
+    client.post("/api/queue", json={"user_id": "user-1", "value": "client-1"})
+    assert client_queue.items == ["client-1"]
+
+    # Undo the enqueue
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Operation undone successfully"
+    assert response.get_json()["undone_operation"]["operation_type"] == "enqueue"
+    assert client_queue.items == []
+
+    # Check that operation is marked as undone
+    with app.app_context():
+        log = OperationLog.query.filter_by(operation_type="enqueue").first()
+        assert log.is_undone is True
+
+
+def test_undo_dequeue_adds_value_back_to_queue():
+    client = app.test_client()
+
+    # Setup: add and remove from queue
+    client_queue.enqueue("client-1")
+    client.delete("/api/queue/dequeue", json={"user_id": "user-1"})
+    assert client_queue.items == []
+
+    # Undo the dequeue
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 200
+    assert client_queue.items == ["client-1"]
+    assert response.get_json()["undone_operation"]["value"] == "client-1"
+
+
+def test_undo_push_removes_value_from_stack():
+    client = app.test_client()
+
+    # Push a value
+    client.post("/api/transactions", json={"user_id": "user-1", "value": "tx-1"})
+    assert transaction_stack.items == ["tx-1"]
+
+    # Undo the push
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 200
+    assert transaction_stack.items == []
+    assert response.get_json()["undone_operation"]["operation_type"] == "push"
+
+
+def test_undo_pop_adds_value_back_to_stack():
+    client = app.test_client()
+
+    # Setup: add and remove from stack
+    transaction_stack.push("tx-1")
+    client.delete("/api/transactions/pop", json={"user_id": "user-1"})
+    assert transaction_stack.items == []
+
+    # Undo the pop
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 200
+    assert transaction_stack.items == ["tx-1"]
+
+
+def test_undo_returns_not_found_when_no_operations():
+    client = app.test_client()
+
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "No operation to undo"}
+
+
+def test_undo_only_undoes_user_own_operations():
+    client = app.test_client()
+
+    # User 1 enqueues
+    client.post("/api/queue", json={"user_id": "user-1", "value": "client-1"})
+    # User 2 enqueues
+    client.post("/api/queue", json={"user_id": "user-2", "value": "client-2"})
+
+    # User 1 undoes their operation
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 200
+    assert response.get_json()["undone_operation"]["value"] == "client-1"
+    # User 2's value should still be in queue
+    assert "client-2" in client_queue.items
+
+
+def test_undo_creates_undo_log_entry():
+    client = app.test_client()
+
+    # Enqueue a value
+    client.post("/api/queue", json={"user_id": "user-1", "value": "client-1"})
+
+    # Undo the enqueue
+    client.post("/api/undo", json={"user_id": "user-1"})
+
+    # Check undo log was created
+    with app.app_context():
+        undo_log = OperationLog.query.filter_by(operation_type="undo").first()
+        assert undo_log is not None
+        assert undo_log.user_id == "user-1"
+        assert undo_log.value == "client-1"
+        assert "Undid enqueue" in undo_log.description
+
+
+def test_undo_does_not_undo_already_undone_operations():
+    client = app.test_client()
+
+    # Enqueue and undo
+    client.post("/api/queue", json={"user_id": "user-1", "value": "client-1"})
+    client.post("/api/undo", json={"user_id": "user-1"})
+
+    # Try to undo again
+    response = client.post("/api/undo", json={"user_id": "user-1"})
+
+    assert response.status_code == 404
+    assert response.get_json() == {"error": "No operation to undo"}
