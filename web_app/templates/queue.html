@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Queue — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">FIFO structure</p>
+    <h1>Queue</h1>
+    <p class="page-description">
+      Повне керування чергою клієнтів: перший доданий обробляється першим.
+    </p>
+  </section>
+
+  <section class="detail-layout">
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">New item</p>
+          <h2>Додати клієнта</h2>
+        </div>
+      </div>
+      <form class="operation-form" data-operation="enqueue" data-target="queue">
+        <label>
+          User ID
+          <input name="user_id" required maxlength="100">
+        </label>
+        <label>
+          Значення клієнта
+          <input name="value" required maxlength="100">
+        </label>
+        <button class="button" type="submit">Додати до черги</button>
+      </form>
+      <div class="inline-message" data-message-for="queue" role="status"></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Current state</p>
+          <h2>Обробка</h2>
+        </div>
+        <span class="badge">{{ queue|length }} items</span>
+      </div>
+      <p class="page-description">
+        Обробляється тільки перший елемент відповідно до FIFO.
+      </p>
+      <form class="operation-form" data-operation="dequeue" data-target="queue">
+        <input type="hidden" name="user_id" value="dashboard">
+        <button class="button button--secondary" type="submit">
+          Обробити наступного
+        </button>
+      </form>
+    </article>
+  </section>
+
+  <article class="panel panel--logs">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Items</p>
+        <h2>Поточна черга</h2>
+      </div>
+    </div>
+    <div class="js-queue-list">
+      {% if queue %}
+        <ol class="item-list">
+          {% for item in queue %}
+            <li>
+              <span class="item-position">{{ loop.index }}</span>
+              <span>{{ item }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <div class="empty-state">
+          <strong>Черга порожня</strong>
+          <span>Додайте клієнта, щоб він з’явився тут.</span>
+        </div>
+      {% endif %}
+    </div>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

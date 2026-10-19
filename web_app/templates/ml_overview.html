@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}ML Overview — Banking Platform{% endblock %}
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Machine learning</p>
+    <h1>ML Overview</h1>
+    <p class="page-description">Стан pipeline, артефактів і доступних даних.</p>
+  </section>
+  <section class="dashboard-grid">
+    <article class="stat-card"><span class="stat-label">Users</span><strong class="stat-value">{{ user_count }}</strong><span class="stat-caption">feature records</span></article>
+    <article class="stat-card"><span class="stat-label">Products</span><strong class="stat-value">{{ product_count }}</strong><span class="stat-caption">feature records</span></article>
+    <article class="stat-card"><span class="stat-label">Model</span><strong class="stat-value stat-value--success">{{ "Ready" if statuses.engagement_model else "Missing" }}</strong><span class="stat-caption">engagement model</span></article>
+  </section>
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Pipeline controls</h2>
+        <p class="page-description">Запусти training pipeline, щоб перестворити ML-артефакти.</p>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="button" id="train-ml-button" type="button">
+        Retrain model
+      </button>
+    </div>
+    <hr>
+    <div class="panel-header">
+      <div>
+        <h2>Cleaned dataset</h2>
+        <p class="page-description">Перествори cleaned CSV з першими вказаними рядками raw dataset.</p>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <label for="dataset-rows">Кількість рядків</label>
+      <input id="dataset-rows" type="number" min="1" max="1000000" value="100000">
+      <button class="button button--secondary" id="prepare-data-button" type="button">
+        Prepare dataset
+      </button>
+    </div>
+    <p class="inline-message" id="train-ml-status" aria-live="polite"></p>
+    <p class="inline-message" id="prepare-data-status" aria-live="polite"></p>
+  </article>
+  <article class="panel">
+    <div class="panel-header"><h2>Artifact status</h2></div>
+    <ul class="metric-list">
+      {% for name, available in statuses.items() %}
+        <li><span>{{ name }}.joblib</span><strong class="{{ 'text-success' if available else 'text-error' }}">{{ "Available" if available else "Missing" }}</strong></li>
+      {% endfor %}
+    </ul>
+  </article>
+  {% if metrics %}
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header"><h2>Model metrics</h2></div>
+        <ul class="metric-list">
+          {% for name, value in metrics.items() %}
+            <li><span>{{ name }}</span><strong>{{ "%.3f"|format(value) }}</strong></li>
+          {% endfor %}
+        </ul>
+      </article>
+      <article class="panel">
+        <div class="panel-header"><h2>Engagement target</h2></div>
+        <ul class="metric-list">
+          <li><span>High engagement</span><strong>{{ class_counts.get(1, 0) }}</strong></li>
+          <li><span>Low engagement</span><strong>{{ class_counts.get(0, 0) }}</strong></li>
+          <li><span>Definition</span><strong>purchases ≥ 1</strong></li>
+        </ul>
+      </article>
+    </section>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const trainButton = document.querySelector("#train-ml-button");
+    const trainStatus = document.querySelector("#train-ml-status");
+    const prepareButton = document.querySelector("#prepare-data-button");
+    const rowsInput = document.querySelector("#dataset-rows");
+    const prepareStatus = document.querySelector("#prepare-data-status");
+
+    trainButton.addEventListener("click", async () => {
+      trainButton.disabled = true;
+      trainButton.textContent = "Training...";
+      trainStatus.classList.remove("is-error");
+      trainStatus.textContent = "Pipeline is running. This may take a while.";
+
+      try {
+        const response = await fetch("{{ url_for('train_ml_pipeline') }}", {
+          method: "POST",
+          headers: {"Accept": "application/json"},
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Training failed.");
+        }
+
+        trainStatus.textContent = result.message;
+        window.setTimeout(() => window.location.reload(), 500);
+      } catch (error) {
+        trainButton.disabled = false;
+        trainButton.textContent = "Retrain model";
+        trainStatus.classList.add("is-error");
+        trainStatus.textContent = error.message;
+      }
+    });
+
+    prepareButton.addEventListener("click", async () => {
+      prepareButton.disabled = true;
+      trainButton.disabled = true;
+      prepareStatus.classList.remove("is-error");
+      prepareStatus.textContent = "Preparing cleaned dataset...";
+
+      try {
+        const response = await fetch("{{ url_for('prepare_ml_dataset') }}", {
+          method: "POST",
+          headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({rows: Number(rowsInput.value)}),
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || "Dataset preparation failed.");
+        }
+
+        prepareStatus.textContent =
+          `${result.message} Rows requested: ${result.rows}.`;
+        window.setTimeout(() => window.location.reload(), 500);
+      } catch (error) {
+        prepareButton.disabled = false;
+        trainButton.disabled = false;
+        prepareStatus.classList.add("is-error");
+        prepareStatus.textContent = error.message;
+      }
+    });
+  </script>
+{% endblock %}

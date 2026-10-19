@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Operation Log — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Audit trail</p>
+    <h1>Operation Log</h1>
+    <p class="page-description">
+      Повна історія операцій із чергою та стеком.
+    </p>
+  </section>
+
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Історія операцій</h2>
+      </div>
+      <button class="button button--secondary" type="button" data-refresh-logs>
+        Оновити
+      </button>
+    </div>
+    <div class="inline-message" data-message-for="logs" role="status"></div>
+    <div class="table-wrapper">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Час</th>
+            <th>User ID</th>
+            <th>Структура</th>
+            <th>Операція</th>
+            <th>Значення</th>
+            <th>Опис</th>
+          </tr>
+        </thead>
+        <tbody data-log-list>
+          <tr><td colspan="6" class="empty-cell">Завантаження журналу…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Activity overview</p>
+    <h1>Analytics</h1>
+    <p class="page-description">
+      Базова статистика операцій із журналу системи.
+    </p>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="stat-card">
+      <span class="stat-label">Усього операцій</span>
+      <strong class="stat-value">{{ total_operations }}</strong>
+      <span class="stat-caption">записів у журналі</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Queue</span>
+      <strong class="stat-value">{{ structure_counts.queue }}</strong>
+      <span class="stat-caption">операцій із чергою</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Stack</span>
+      <strong class="stat-value">{{ structure_counts.stack }}</strong>
+      <span class="stat-caption">операцій зі стеком</span>
+    </article>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel">
+      <div class="panel-header"><h2>За типом операції</h2></div>
+      <ul class="metric-list">
+        {% for operation, count in operation_counts.items() %}
+          <li><span>{{ operation }}</span><strong>{{ count }}</strong></li>
+        {% endfor %}
+      </ul>
+    </article>
+    <article class="panel">
+      <div class="panel-header"><h2>За структурою</h2></div>
+      <ul class="metric-list">
+        {% for structure, count in structure_counts.items() %}
+          <li><span>{{ structure }}</span><strong>{{ count }}</strong></li>
+        {% endfor %}
+      </ul>
+    </article>
+  </section>
+{% endblock %}

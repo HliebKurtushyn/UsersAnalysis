@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">LIFO structure</p>
+    <h1>Transactions</h1>
+    <p class="page-description">
+      Повне керування стеком транзакцій: остання додана обробляється першою.
+    </p>
+  </section>
+
+  <section class="detail-layout">
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">New item</p>
+          <h2>Додати транзакцію</h2>
+        </div>
+      </div>
+      <form class="operation-form" data-operation="push" data-target="transactions">
+        <label>
+          User ID
+          <input name="user_id" required maxlength="100">
+        </label>
+        <label>
+          Значення транзакції
+          <input name="value" required maxlength="100">
+        </label>
+        <button class="button" type="submit">Додати транзакцію</button>
+      </form>
+      <div class="inline-message" data-message-for="transactions" role="status"></div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Current state</p>
+          <h2>Обробка</h2>
+        </div>
+        <span class="badge">{{ stack|length }} items</span>
+      </div>
+      <p class="page-description">
+        Обробляється тільки верхній елемент відповідно до LIFO.
+      </p>
+      <form class="operation-form" data-operation="pop" data-target="transactions">
+        <input type="hidden" name="user_id" value="dashboard">
+        <button class="button button--secondary" type="submit">
+          Обробити останню
+        </button>
+      </form>
+    </article>
+  </section>
+
+  <article class="panel panel--logs">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Items</p>
+        <h2>Поточний стек</h2>
+      </div>
+    </div>
+    <div class="js-transactions-list">
+      {% if stack %}
+        <ol class="item-list item-list--stack">
+          {% for item in stack|reverse %}
+            <li>
+              {% if loop.first %}
+                <span class="badge badge--accent">TOP</span>
+              {% else %}
+                <span class="item-position">{{ loop.index }}</span>
+              {% endif %}
+              <span>{{ item }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <div class="empty-state">
+          <strong>Стек порожній</strong>
+          <span>Додайте транзакцію, щоб вона з’явилася тут.</span>
+        </div>
+      {% endif %}
+    </div>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

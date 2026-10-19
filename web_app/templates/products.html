@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}ML / Products — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Machine learning</p>
+    <h1>ML / Products</h1>
+    <p class="page-description">
+      Product-level features і кластери, створені навчальним pipeline.
+    </p>
+  </section>
+
+  {% if not artifacts_available %}
+    <article class="panel empty-state">
+      <strong>ML-артефакти ще не створені</strong>
+      <span>Запусти <code>python -m ml_pipeline.train</code>, щоб завантажити product features і кластери.</span>
+    </article>
+  {% else %}
+    <section class="content-grid">
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Product features</h2>
+          <span class="badge">{{ product_features|length }} products</span>
+        </div>
+        <form class="sort-form" method="get">
+          <label>
+            Сортувати за
+            <select name="sort_by">
+              {% for column in ("product_id", "views", "carts", "purchases") %}
+                <option value="{{ column }}" {% if sort_by == column %}selected{% endif %}>
+                  {{ column }}
+                </option>
+              {% endfor %}
+              <option value="conversion_rate" {% if sort_by == "conversion_rate" %}selected{% endif %}>conversion rate</option>
+            </select>
+          </label>
+          <label>
+            Cluster
+            <select name="cluster">
+              <option value="">Усі</option>
+              {% for cluster in cluster_ids %}
+                <option value="{{ cluster }}" {% if cluster_filter == cluster|string %}selected{% endif %}>{{ cluster }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Порядок
+            <select name="order">
+              <option value="asc" {% if order == "asc" %}selected{% endif %}>За зростанням</option>
+              <option value="desc" {% if order == "desc" %}selected{% endif %}>За спаданням</option>
+            </select>
+          </label>
+          <button class="button button--secondary" type="submit">Застосувати</button>
+        </form>
+        <div class="table-wrapper">
+          <table class="log-table">
+            <thead><tr><th>Product ID</th><th>Views</th><th>Carts</th><th>Purchases</th><th>Conversion</th></tr></thead>
+            <tbody>
+              {% for product in product_features %}
+                <tr>
+                  <td>{{ product.product_id }}</td>
+                  <td>{{ product.views }}</td>
+                  <td>{{ product.carts }}</td>
+                  <td>{{ product.purchases }}</td>
+                  <td>{{ "%.2f"|format(product.conversion_rate * 100) }}%</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-header">
+          <h2>Product clusters</h2>
+          <span class="badge">{{ product_clusters|length }} assignments</span>
+        </div>
+        <div class="table-wrapper">
+          <table class="log-table">
+            <thead><tr><th>Product ID</th><th>Cluster</th></tr></thead>
+            <tbody>
+              {% for product in product_clusters %}
+                <tr><td>{{ product.product_id }}</td><td>{{ product.cluster }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  {% endif %}
+{% endblock %}
