@@ -413,6 +413,16 @@ h2 {
   color: var(--color-sidebar);
 }
 
+.button--tertiary {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.button--tertiary:hover {
+  background: #fef3c7;
+}
+
 .panel-actions {
   display: flex;
   justify-content: flex-end;

@@ -3,6 +3,7 @@ const endpointByOperation = {
   dequeue: ["/api/queue/dequeue", "DELETE"],
   push: ["/api/transactions", "POST"],
   pop: ["/api/transactions/pop", "DELETE"],
+  undo: ["/api/undo", "POST"],
 };
 
 const state = {

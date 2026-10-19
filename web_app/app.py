@@ -49,6 +49,7 @@ class OperationLog(db.Model):
     value = db.Column(db.String(255), nullable=False)
     timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     description = db.Column(db.String(255))
+    is_undone = db.Column(db.Boolean, default=False)
 
 
 def log_operation(user_id, structure, operation_type, value, description):
@@ -417,11 +418,94 @@ def get_operation_logs():
                     "value": log.value,
                     "timestamp": (log.timestamp.isoformat() if log.timestamp else None),
                     "description": log.description,
+                    "is_undone": log.is_undone,
                 }
                 for log in logs
             ]
         }
     ), HTTPStatus.OK
+
+
+@app.post("/api/undo")
+def undo_last_operation():
+    """Undo the last operation (enqueue, dequeue, push, or pop)."""
+    payload = validate_json_request(request, StructureOperationRequest)
+    if isinstance(payload, tuple):
+        return payload
+
+    last_log = (
+        OperationLog.query.filter(
+            OperationLog.user_id == payload.user_id,
+            OperationLog.is_undone.is_(False),
+            OperationLog.operation_type != "undo",
+        )
+        .order_by(OperationLog.timestamp.desc())
+        .first()
+    )
+
+    if not last_log:
+        return jsonify({"error": "No operation to undo"}), HTTPStatus.NOT_FOUND
+
+    try:
+        if last_log.operation_type == "enqueue":
+            value = client_queue.dequeue()
+            if value != last_log.value:
+                client_queue.items.insert(0, value)
+                if last_log.value in client_queue.items:
+                    client_queue.items.remove(last_log.value)
+                else:
+                    return jsonify(
+                        {"error": "Cannot undo: value not found in queue"}
+                    ), HTTPStatus.CONFLICT
+
+        elif last_log.operation_type == "dequeue":
+            client_queue.items.insert(0, last_log.value)
+
+        elif last_log.operation_type == "push":
+            value = transaction_stack.pop()
+            if value != last_log.value:
+                transaction_stack.items.append(value)
+                if last_log.value in transaction_stack.items:
+                    transaction_stack.items.remove(last_log.value)
+                else:
+                    return jsonify(
+                        {"error": "Cannot undo: value not found in stack"}
+                    ), HTTPStatus.CONFLICT
+
+        elif last_log.operation_type == "pop":
+            transaction_stack.push(last_log.value)
+
+        else:
+            return jsonify(
+                {"error": f"Cannot undo operation type: {last_log.operation_type}"}
+            ), HTTPStatus.BAD_REQUEST
+
+        last_log.is_undone = True
+        db.session.commit()
+
+        log_operation(
+            user_id=payload.user_id,
+            structure=last_log.structure,
+            operation_type="undo",
+            value=last_log.value,
+            description=f"Undid {last_log.operation_type} of {last_log.value}",
+        )
+
+        return jsonify(
+            {
+                "message": "Operation undone successfully",
+                "undone_operation": {
+                    "id": last_log.id,
+                    "operation_type": last_log.operation_type,
+                    "structure": last_log.structure,
+                    "value": last_log.value,
+                },
+            }
+        ), HTTPStatus.OK
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), HTTPStatus.INTERNAL_SERVER_ERROR
 
 
 with app.app_context():
