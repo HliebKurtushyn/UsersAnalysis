@@ -273,6 +273,28 @@ def test_get_operation_logs_returns_newest_logs_first():
     assert logs[1]["is_undone"] is False
 
 
+def test_get_operation_logs_filters_by_user_and_operation():
+    client = app.test_client()
+    client.post("/api/queue", json={"user_id": "user-1", "value": "first"})
+    client.post("/api/queue", json={"user_id": "user-2", "value": "second"})
+    client.post("/api/transactions", json={"user_id": "user-1", "value": "third"})
+
+    response = client.get("/api/logs?user_id=user-1&operation_type=enqueue")
+
+    assert response.status_code == 200
+    logs = response.get_json()["items"]
+    assert len(logs) == 1
+    assert logs[0]["user_id"] == "user-1"
+    assert logs[0]["operation_type"] == "enqueue"
+
+
+def test_get_operation_logs_rejects_unknown_operation_type():
+    response = app.test_client().get("/api/logs?operation_type=unknown")
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Invalid query parameters"
+
+
 def test_dequeue_returns_and_logs_actual_queue_value():
     client = app.test_client()
     client_queue.enqueue("actual-client")
