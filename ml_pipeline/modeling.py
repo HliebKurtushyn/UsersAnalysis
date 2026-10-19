@@ -4,16 +4,24 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import (
     accuracy_score,
+    average_precision_score,
+    balanced_accuracy_score,
     precision_score,
     recall_score,
     f1_score,
+    roc_auc_score,
 )
+
+ENGAGEMENT_FEATURE_COLUMNS = ["views", "carts"]
 
 
 def create_model():
     """Create a small baseline classifier for further tuning."""
     return GridSearchCV(
-        RandomForestClassifier(random_state=42),
+        RandomForestClassifier(
+            class_weight="balanced",
+            random_state=42,
+        ),
         param_grid={"n_estimators": [100]},
         cv=3,
     )
@@ -22,8 +30,8 @@ def create_model():
 def build_engagement_target(
     features: pd.DataFrame,
 ) -> pd.Series:
-    """Label users with at least 3 purchases as highly engaged."""
-    return (features["purchases"] >= 3).astype(int)
+    """Label users who completed at least one purchase."""
+    return (features["purchases"] >= 1).astype(int)
 
 
 def split_data(
@@ -32,7 +40,7 @@ def split_data(
     """Split user features and target into training and test sets."""
 
     y = build_engagement_target(features)
-    X = features[["views", "carts"]]
+    X = features[ENGAGEMENT_FEATURE_COLUMNS]
 
     return train_test_split(
         X,
@@ -50,12 +58,16 @@ def evaluate_model(features: pd.DataFrame) -> dict[str, float]:
     model = create_model()
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
+    y_score = model.predict_proba(X_test)[:, 1]
 
     return {
         "accuracy": accuracy_score(y_test, y_pred),
+        "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
         "precision": precision_score(y_test, y_pred, zero_division=0),
-        "recall": recall_score(y_test, y_pred),
-        "f1": f1_score(y_test, y_pred),
+        "recall": recall_score(y_test, y_pred, zero_division=0),
+        "f1": f1_score(y_test, y_pred, zero_division=0),
+        "average_precision": average_precision_score(y_test, y_score),
+        "roc_auc": (roc_auc_score(y_test, y_score) if y_test.nunique() > 1 else 0.0),
     }
 
 

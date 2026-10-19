@@ -1,21 +1,44 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
+from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
+import joblib
 from flask_sqlalchemy import SQLAlchemy
+from ml_pipeline.recommender import top_products
+from ml_pipeline.prepare_data import prepare_data
+from ml_pipeline.train import CLEANED_DATA_PATH, RAW_DATA_PATH, train
 
-from .schemas import PushTransactionRequest, QueueRequest, QueueQuery, TransactionsQuery
+from .config import Config
+from .schemas import (
+    PushTransactionRequest,
+    PrepareDataRequest,
+    QueueQuery,
+    QueueRequest,
+    StructureOperationRequest,
+    TransactionsQuery,
+)
 from .structures import Queue, Stack
 from .utils import validate_json_request, validate_query_params
 
 
 app = Flask(__name__)
+app.config.from_object(Config)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///banking.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 client_queue = Queue()
 transaction_stack = Stack()
+ARTIFACTS_DIR = Path(__file__).resolve().parent.parent / "artifacts"
+ML_ARTIFACT_NAMES = (
+    "engagement_model",
+    "user_features",
+    "product_features",
+    "user_clusters",
+    "product_clusters",
+    "metadata",
+)
 
 
 class OperationLog(db.Model):
@@ -42,10 +65,233 @@ def log_operation(user_id, structure, operation_type, value, description):
     db.session.commit()
 
 
+@app.context_processor
+def inject_global_variables():
+    return {"product_version": app.config["PRODUCT_VERSION"]}
+
+
+def _load_artifact(name):
+    path = ARTIFACTS_DIR / f"{name}.joblib"
+    return joblib.load(path) if path.exists() else None
+
+
+def _with_rates(records):
+    for record in records:
+        views = record.get("views", 0) or 0
+        purchases = record.get("purchases", 0) or 0
+        record["conversion_rate"] = purchases / views if views > 0 else 0
+    return records
+
+
 @app.get("/")
 def index():
     return render_template(
-        "index.html", queue=client_queue.items, stack=transaction_stack.items
+        "dashboard.html", queue=client_queue.items, stack=transaction_stack.items
+    ), HTTPStatus.OK
+
+
+@app.get("/queue")
+def queue_page():
+    return render_template("queue.html", queue=client_queue.items), HTTPStatus.OK
+
+
+@app.get("/transactions")
+def transactions_page():
+    return render_template(
+        "transactions.html",
+        stack=transaction_stack.items,
+    ), HTTPStatus.OK
+
+
+@app.get("/logs")
+def logs_page():
+    return render_template("logs.html"), HTTPStatus.OK
+
+
+@app.get("/analytics")
+def analytics_page():
+    operation_counts = {
+        operation: OperationLog.query.filter_by(operation_type=operation).count()
+        for operation in ("enqueue", "dequeue", "push", "pop")
+    }
+    structure_counts = {
+        structure: OperationLog.query.filter_by(structure=structure).count()
+        for structure in ("queue", "stack")
+    }
+    return render_template(
+        "analytics.html",
+        operation_counts=operation_counts,
+        structure_counts=structure_counts,
+        total_operations=OperationLog.query.count(),
+    ), HTTPStatus.OK
+
+
+@app.get("/products")
+def products_page():
+    product_features = _load_artifact("product_features")
+    product_clusters = _load_artifact("product_clusters")
+
+    sort_by = request.args.get("sort_by", "product_id")
+    order = request.args.get("order", "asc")
+    cluster_filter = request.args.get("cluster", "")
+    allowed_sort_columns = {
+        "product_id",
+        "views",
+        "carts",
+        "purchases",
+        "conversion_rate",
+    }
+    if sort_by not in allowed_sort_columns:
+        sort_by = "product_id"
+    if order not in {"asc", "desc"}:
+        order = "asc"
+
+    products = []
+    if product_features is not None:
+        products = _with_rates(product_features.to_dict("records"))
+        if cluster_filter and product_clusters is not None:
+            cluster_records = product_clusters.to_dict("records")
+            cluster_ids = {
+                row["product_id"]
+                for row in cluster_records
+                if str(row["cluster"]) == cluster_filter
+            }
+            products = [row for row in products if row["product_id"] in cluster_ids]
+        products.sort(key=lambda row: row.get(sort_by, 0), reverse=order == "desc")
+
+    cluster_ids = (
+        sorted(product_clusters["cluster"].unique().tolist())
+        if product_clusters is not None
+        else []
+    )
+
+    return render_template(
+        "products.html",
+        product_features=products,
+        product_clusters=(
+            product_clusters.to_dict("records") if product_clusters is not None else []
+        ),
+        artifacts_available=product_features is not None,
+        sort_by=sort_by,
+        order=order,
+        cluster_filter=cluster_filter,
+        cluster_ids=cluster_ids,
+    ), HTTPStatus.OK
+
+
+@app.get("/users")
+def users_page():
+    user_features = _load_artifact("user_features")
+    user_clusters = _load_artifact("user_clusters")
+    users = []
+    cluster_filter = request.args.get("cluster", "")
+    engagement_filter = request.args.get("engagement", "")
+    sort_by = request.args.get("sort_by", "user_id")
+    order = request.args.get("order", "asc")
+
+    if user_features is not None:
+        if user_clusters is not None:
+            users = user_features.merge(
+                user_clusters,
+                on="user_id",
+                how="left",
+            ).to_dict("records")
+        else:
+            users = user_features.to_dict("records")
+        for user in users:
+            user["engagement"] = "High" if user.get("purchases", 0) >= 1 else "Low"
+        if cluster_filter:
+            users = [u for u in users if str(u.get("cluster")) == cluster_filter]
+        if engagement_filter in {"High", "Low"}:
+            users = [u for u in users if u["engagement"] == engagement_filter]
+        allowed_sort_columns = {"user_id", "views", "carts", "purchases"}
+        if sort_by not in allowed_sort_columns:
+            sort_by = "user_id"
+        if order not in {"asc", "desc"}:
+            order = "asc"
+        users.sort(key=lambda row: row.get(sort_by, 0), reverse=order == "desc")
+
+    cluster_ids = (
+        sorted(user_clusters["cluster"].unique().tolist())
+        if user_clusters is not None
+        else []
+    )
+
+    return render_template(
+        "users.html",
+        users=users,
+        artifacts_available=user_features is not None,
+        cluster_filter=cluster_filter,
+        engagement_filter=engagement_filter,
+        sort_by=sort_by,
+        order=order,
+        cluster_ids=cluster_ids,
+    ), HTTPStatus.OK
+
+
+@app.get("/ml")
+def ml_overview_page():
+    statuses = {name: (_load_artifact(name) is not None) for name in ML_ARTIFACT_NAMES}
+    user_features = _load_artifact("user_features")
+    product_features = _load_artifact("product_features")
+    metadata = _load_artifact("metadata") or {}
+    return render_template(
+        "ml_overview.html",
+        statuses=statuses,
+        user_count=len(user_features) if user_features is not None else 0,
+        product_count=len(product_features) if product_features is not None else 0,
+        metadata=metadata,
+        metrics=metadata.get("model_metrics", {}),
+        class_counts=metadata.get("class_counts", {}),
+    ), HTTPStatus.OK
+
+
+@app.post("/api/ml/train")
+def train_ml_pipeline():
+    train()
+    return jsonify(
+        {"message": "ML artifacts were recreated successfully."}
+    ), HTTPStatus.OK
+
+
+@app.post("/api/ml/prepare-data")
+def prepare_ml_dataset():
+    payload = validate_json_request(request, PrepareDataRequest)
+    if isinstance(payload, tuple):
+        return payload
+
+    try:
+        output_path = prepare_data(
+            source_path=RAW_DATA_PATH,
+            output_path=CLEANED_DATA_PATH,
+            rows=payload.rows,
+        )
+    except FileNotFoundError as error:
+        return jsonify({"error": str(error)}), HTTPStatus.NOT_FOUND
+    except ValueError as error:
+        return jsonify({"error": str(error)}), HTTPStatus.BAD_REQUEST
+
+    return jsonify(
+        {
+            "message": "Cleaned dataset was recreated successfully.",
+            "path": str(output_path),
+            "rows": payload.rows,
+        }
+    ), HTTPStatus.OK
+
+
+@app.get("/recommendations")
+def recommendations_page():
+    product_features = _load_artifact("product_features")
+    recommendations = []
+    if product_features is not None:
+        recommendations = _with_rates(
+            top_products(product_features, limit=10).to_dict("records")
+        )
+    return render_template(
+        "recommendations.html",
+        recommendations=recommendations,
+        artifacts_available=product_features is not None,
     ), HTTPStatus.OK
 
 
@@ -70,21 +316,23 @@ def enqueue_client():
 
 @app.delete("/api/queue/dequeue")
 def dequeue_client():
-    payload = validate_json_request(request, QueueRequest)
+    payload = validate_json_request(request, StructureOperationRequest)
     if isinstance(payload, tuple):
         return payload
 
-    client_queue.dequeue()
+    value = client_queue.dequeue()
+    if value is None:
+        return jsonify({"error": "Queue is empty"}), HTTPStatus.NOT_FOUND
 
     log_operation(
         user_id=payload.user_id,
         structure="queue",
         operation_type="dequeue",
-        value=payload.value,
-        description=f"Added {payload.value} to queue",
+        value=value,
+        description=f"Removed {value} from queue",
     )
 
-    return jsonify({"value": payload.value}), HTTPStatus.OK
+    return jsonify({"value": value}), HTTPStatus.OK
 
 
 @app.post("/api/transactions")
@@ -106,23 +354,25 @@ def push_transaction():
     return jsonify({"value": payload.value}), HTTPStatus.CREATED
 
 
-@app.get("/api/transactions/pop")
+@app.delete("/api/transactions/pop")
 def pop_transaction():
-    payload = validate_json_request(request, PushTransactionRequest)
+    payload = validate_json_request(request, StructureOperationRequest)
     if isinstance(payload, tuple):
         return payload
 
-    transaction_stack.pop()
+    value = transaction_stack.pop()
+    if value is None:
+        return jsonify({"error": "Stack is empty"}), HTTPStatus.NOT_FOUND
 
     log_operation(
         user_id=payload.user_id,
         structure="stack",
         operation_type="pop",
-        value=payload.value,
-        description=f"Added {payload.value} to queue",
+        value=value,
+        description=f"Removed {value} from stack",
     )
 
-    return jsonify({"value": payload.value}), HTTPStatus.OK
+    return jsonify({"value": value}), HTTPStatus.OK
 
 
 @app.get("/api/queue")
@@ -151,6 +401,27 @@ def get_transactions():
         items = items[: params.limit]
 
     return jsonify({"items": items}), HTTPStatus.OK
+
+
+@app.get("/api/logs")
+def get_operation_logs():
+    logs = OperationLog.query.order_by(OperationLog.timestamp.desc()).all()
+    return jsonify(
+        {
+            "items": [
+                {
+                    "id": log.id,
+                    "user_id": log.user_id,
+                    "structure": log.structure,
+                    "operation_type": log.operation_type,
+                    "value": log.value,
+                    "timestamp": (log.timestamp.isoformat() if log.timestamp else None),
+                    "description": log.description,
+                }
+                for log in logs
+            ]
+        }
+    ), HTTPStatus.OK
 
 
 with app.app_context():

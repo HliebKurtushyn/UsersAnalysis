@@ -18,7 +18,7 @@ repos:
     hooks:
       - id: pytest
         name: pytest
-        entry: python -m pytest -q
+        entry: bash -c 'PYTHONPATH=. .venv/bin/pytest -q'
         language: system
         pass_filenames: false
         always_run: true

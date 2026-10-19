@@ -61,16 +61,17 @@ def test_create_model_returns_grid_search_with_random_forest():
 
     assert isinstance(model, GridSearchCV)
     assert isinstance(model.estimator, RandomForestClassifier)
+    assert model.estimator.class_weight == "balanced"
     assert model.param_grid == {"n_estimators": [100]}
     assert model.cv == 3
 
 
-def test_build_engagement_target_marks_users_with_at_least_three_purchases(
+def test_build_engagement_target_marks_users_with_at_least_one_purchase(
     engagement_features,
 ):
     result = build_engagement_target(engagement_features)
 
-    assert result.tolist() == [0, 0, 0, 1, 1, 0, 0, 0, 1, 1]
+    assert result.tolist() == [0, 1, 1, 1, 1, 0, 1, 1, 1, 1]
     assert result.dtype == "int64"
 
 
@@ -90,7 +91,7 @@ def test_split_data_returns_features_and_target_with_expected_shapes(
     assert len(y_train) == 8
     assert len(y_test) == 2
     assert set(y_train.unique()) == {0, 1}
-    assert set(y_test.unique()) == {0, 1}
+    assert set(y_test.unique()).issubset({0, 1})
 
 
 def test_check_class_balance_returns_counts_and_ratios():
@@ -109,7 +110,15 @@ def test_check_class_balance_returns_counts_and_ratios():
 def test_evaluate_model_returns_required_metrics(engagement_features):
     result = evaluate_model(engagement_features)
 
-    assert set(result) == {"accuracy", "precision", "recall", "f1"}
+    assert set(result) == {
+        "accuracy",
+        "balanced_accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "average_precision",
+        "roc_auc",
+    }
 
     for metric_value in result.values():
         assert 0.0 <= metric_value <= 1.0

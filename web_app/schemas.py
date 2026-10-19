@@ -23,6 +23,14 @@ class PushTransactionRequest(BaseModel):
     value: str = Field(min_length=1, max_length=100)
 
 
+class StructureOperationRequest(BaseModel):
+    """Request body for removing an item from a structure."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: str = Field(min_length=1, max_length=100)
+
+
 class QueueQuery(BaseModel):
     """Query parameters for queue operations."""
 
@@ -37,3 +45,11 @@ class TransactionsQuery(BaseModel):
     """WIP: More detailed description of the query parameters soon."""
 
     limit: int | None = Field(default=None, gt=0)
+
+
+class PrepareDataRequest(BaseModel):
+    """Request body for rebuilding the cleaned dataset."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rows: int = Field(gt=0, le=1_000_000)
