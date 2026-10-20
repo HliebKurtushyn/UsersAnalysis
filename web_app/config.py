@@ -1,2 +1,2 @@
 class Config:
-    PRODUCT_VERSION = "0.9.8"
+    PRODUCT_VERSION = "1.0.0"

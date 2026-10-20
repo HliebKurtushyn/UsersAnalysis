@@ -2,7 +2,7 @@
 services:
   web:
     build: .
-    image: user-analysis:0.9.8
+    image: user-analysis:1.0.0
     ports:
       - "5000:5000"
     volumes:
