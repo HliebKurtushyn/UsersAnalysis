@@ -111,6 +111,28 @@ def logs_page():
     return render_template("logs.html"), HTTPStatus.OK
 
 
+@app.get("/logs/export/json")
+def export_logs_json():
+    logs = OperationLog.query.order_by(OperationLog.timestamp.desc()).all()
+    data = {}
+
+    for log in logs:
+        data[log.id] = {
+            "user_id": log.user_id,
+            "structure": log.structure,
+            "operation_type": log.operation_type,
+            "value": log.value,
+            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+            "description": log.description,
+            "is_undone": log.is_undone,
+        }
+
+    response = jsonify(data)
+    response.headers["Content-Disposition"] = 'attachment; filename="logs.json"'
+
+    return response
+
+
 @app.get("/analytics")
 def analytics_page():
     operation_counts = {

@@ -295,6 +295,52 @@ def test_get_operation_logs_rejects_unknown_operation_type():
     assert response.get_json()["error"] == "Invalid query parameters"
 
 
+def test_export_logs_json_returns_downloadable_log_data():
+    client = app.test_client()
+    client.post(
+        "/api/queue",
+        json={"user_id": "user-1", "value": "client-1"},
+    )
+    client.post(
+        "/api/transactions",
+        json={"user_id": "user-2", "value": "transaction-1"},
+    )
+
+    response = client.get("/logs/export/json")
+
+    assert response.status_code == 200
+    assert response.content_type == "application/json"
+    assert response.headers["Content-Disposition"] == (
+        'attachment; filename="logs.json"'
+    )
+
+    exported_logs = response.get_json()
+    assert len(exported_logs) == 2
+    exported_by_user = {log["user_id"]: log for log in exported_logs.values()}
+    assert exported_by_user["user-2"] == {
+        "user_id": "user-2",
+        "structure": "stack",
+        "operation_type": "push",
+        "value": "transaction-1",
+        "timestamp": exported_by_user["user-2"]["timestamp"],
+        "description": "Added transaction-1 to queue",
+        "is_undone": False,
+    }
+    assert exported_by_user["user-1"]["structure"] == "queue"
+    assert exported_by_user["user-1"]["operation_type"] == "enqueue"
+    assert exported_by_user["user-1"]["value"] == "client-1"
+
+
+def test_export_logs_json_returns_empty_object_without_logs():
+    response = app.test_client().get("/logs/export/json")
+
+    assert response.status_code == 200
+    assert response.get_json() == {}
+    assert response.headers["Content-Disposition"] == (
+        'attachment; filename="logs.json"'
+    )
+
+
 def test_dequeue_returns_and_logs_actual_queue_value():
     client = app.test_client()
     client_queue.enqueue("actual-client")
