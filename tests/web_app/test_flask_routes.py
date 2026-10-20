@@ -1,4 +1,6 @@
 from web_app.app import OperationLog, app, client_queue, db, transaction_stack
+import csv
+from io import StringIO
 import joblib
 import pandas as pd
 
@@ -338,6 +340,52 @@ def test_export_logs_json_returns_empty_object_without_logs():
     assert response.get_json() == {}
     assert response.headers["Content-Disposition"] == (
         'attachment; filename="logs.json"'
+    )
+
+
+def test_export_logs_csv_returns_downloadable_log_data():
+    client = app.test_client()
+    client.post(
+        "/api/queue",
+        json={"user_id": "user-1", "value": "client-1"},
+    )
+    client.post(
+        "/api/transactions",
+        json={"user_id": "user-2", "value": "transaction-1"},
+    )
+
+    response = client.get("/logs/export/csv")
+
+    assert response.status_code == 200
+    assert response.content_type == "text/csv; charset=utf-8"
+    assert response.headers["Content-Disposition"] == (
+        'attachment; filename="logs.csv"'
+    )
+
+    rows = list(csv.DictReader(StringIO(response.get_data(as_text=True))))
+    assert len(rows) == 2
+    rows_by_user = {row["user_id"]: row for row in rows}
+    assert rows_by_user["user-1"]["structure"] == "queue"
+    assert rows_by_user["user-1"]["operation_type"] == "enqueue"
+    assert rows_by_user["user-1"]["value"] == "client-1"
+    assert rows_by_user["user-1"]["description"] == "Added client-1 to queue"
+    assert rows_by_user["user-1"]["is_undone"] == "False"
+    assert rows_by_user["user-1"]["timestamp"]
+    assert rows_by_user["user-2"]["structure"] == "stack"
+    assert rows_by_user["user-2"]["operation_type"] == "push"
+    assert rows_by_user["user-2"]["value"] == "transaction-1"
+
+
+def test_export_logs_csv_returns_header_without_logs():
+    response = app.test_client().get("/logs/export/csv")
+
+    assert response.status_code == 200
+    assert response.content_type == "text/csv; charset=utf-8"
+    assert response.get_data(as_text=True) == (
+        "id,user_id,structure,operation_type,value,timestamp,description,is_undone\n"
+    )
+    assert response.headers["Content-Disposition"] == (
+        'attachment; filename="logs.csv"'
     )
 
 
