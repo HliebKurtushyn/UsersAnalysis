@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Recommendations — Banking Platform{% endblock %}
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Recommendations</p>
+    <h1>Top converting products</h1>
+    <p class="page-description">Товари з найкращим ratio з урахуванням обсягу даних.</p>
+  </section>
+  {% if not artifacts_available %}
+    <article class="panel empty-state"><strong>Product features недоступні</strong><span>Спочатку запусти ML pipeline.</span></article>
+  {% else %}
+    <article class="panel">
+      <div class="table-wrapper">
+        <table class="log-table">
+          <thead><tr><th>Rank</th><th>Product ID</th><th>Views</th><th>Purchases</th><th>Ratio</th></tr></thead>
+          <tbody>
+            {% for product in recommendations %}
+              <tr><td>{{ loop.index }}</td><td>{{ product.product_id }}</td><td>{{ product.views }}</td><td>{{ product.purchases }}</td><td>{{ "%.2f"|format(product.conversion_rate * 100) }}%</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </article>
+  {% endif %}
+{% endblock %}

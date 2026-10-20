@@ -46,7 +46,21 @@ def test_top_products_preserves_order_for_equal_ratios_and_applies_limit():
 
     result = top_products(products, limit=2)
 
-    assert result["product_id"].tolist() == [101, 202]
+    assert result["product_id"].tolist() == [303, 202]
+
+
+def test_top_products_penalizes_perfect_ratio_with_too_few_views():
+    products = pd.DataFrame(
+        {
+            "product_id": [101, 202],
+            "views": [1, 100],
+            "purchases": [1, 50],
+        }
+    )
+
+    result = top_products(products, limit=2)
+
+    assert result["product_id"].tolist() == [202, 101]
 
 
 def test_top_products_does_not_modify_input():

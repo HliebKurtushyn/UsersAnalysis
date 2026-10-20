@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <div>
+      <p class="eyebrow">Overview</p>
+      <h1>Dashboard</h1>
+      <p class="page-description">
+        Керування чергою клієнтів і транзакціями в одному просторі.
+      </p>
+    </div>1
+  </section>
+
+  <section class="dashboard-grid" aria-label="Стан системи">
+    <article class="stat-card">
+      <span class="stat-label">У черзі</span>
+      <strong class="stat-value">{{ queue|length }}</strong>
+      <span class="stat-caption">клієнтів очікують</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Транзакцій</span>
+      <strong class="stat-value">{{ stack|length }}</strong>
+      <span class="stat-caption">у стеку</span>
+    </article>
+    <article class="stat-card">
+      <span class="stat-label">Стан системи</span>
+      <strong class="stat-value stat-value--success">Online</strong>
+      <span class="stat-caption">усі сервіси доступні</span>
+    </article>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel" id="queue">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">FIFO structure</p>
+          <h2>Queue</h2>
+        </div>
+        <span class="badge">{{ queue|length }} items</span>
+      </div>
+      <form class="operation-form" data-operation="enqueue" data-target="queue">
+        <label>
+          User ID
+          <input name="user_id" required maxlength="100">
+        </label>
+        <label>
+          Значення клієнта
+          <input name="value" required maxlength="100">
+        </label>
+        <button class="button" type="submit">Додати до черги</button>
+      </form>
+      <div class="panel-actions">
+        <form class="operation-form" data-operation="dequeue" data-target="queue">
+          <input type="hidden" name="user_id" value="dashboard">
+          <button class="button button--secondary" type="submit">
+            Обробити наступного
+          </button>
+        </form>
+      </div>
+      <div class="inline-message" data-message-for="queue" role="status"></div>
+      <div class="js-queue-list">
+      {% if queue %}
+        <ol class="item-list">
+          {% for item in queue %}
+            <li>
+              <span class="item-position">{{ loop.index }}</span>
+              <span>{{ item }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <div class="empty-state">
+          <strong>Черга порожня</strong>
+          <span>Наразі немає клієнтів, які очікують обслуговування.</span>
+        </div>
+      {% endif %}
+      </div>
+    </article>
+
+    <article class="panel" id="transactions">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">LIFO structure</p>
+          <h2>Transactions</h2>
+        </div>
+        <span class="badge">{{ stack|length }} items</span>
+      </div>
+      <form class="operation-form" data-operation="push" data-target="transactions">
+        <label>
+          User ID
+          <input name="user_id" required maxlength="100">
+        </label>
+        <label>
+          Значення транзакції
+          <input name="value" required maxlength="100">
+        </label>
+        <button class="button" type="submit">Додати транзакцію</button>
+      </form>
+      <div class="panel-actions">
+        <form class="operation-form" data-operation="pop" data-target="transactions">
+          <input type="hidden" name="user_id" value="dashboard">
+          <button class="button button--secondary" type="submit">
+            Обробити останню
+          </button>
+        </form>
+      </div>
+      <div class="inline-message" data-message-for="transactions" role="status"></div>
+      <div class="js-transactions-list">
+      {% if stack %}
+        <ol class="item-list item-list--stack">
+          {% for item in stack|reverse %}
+            <li>
+              {% if loop.first %}
+                <span class="badge badge--accent">TOP</span>
+              {% else %}
+                <span class="item-position">{{ loop.index }}</span>
+              {% endif %}
+              <span>{{ item }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <div class="empty-state">
+          <strong>Стек порожній</strong>
+          <span>Додані транзакції з’являться тут.</span>
+        </div>
+      {% endif %}
+      </div>
+    </article>
+  </section>
+
+  <section class="panel panel--logs" id="operation-log">
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Audit trail</p>
+        <h2>Журнал операцій</h2>
+      </div>
+      <button class="button button--secondary" type="button" data-refresh-logs>
+        Оновити
+      </button>
+    </div>
+    <div class="inline-message" data-message-for="logs" role="status"></div>
+    <div class="table-wrapper">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Час</th>
+            <th>User ID</th>
+            <th>Структура</th>
+            <th>Операція</th>
+            <th>Значення</th>
+            <th>Опис</th>
+          </tr>
+        </thead>
+        <tbody data-log-list>
+          <tr>
+            <td colspan="6" class="empty-cell">Завантаження журналу…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

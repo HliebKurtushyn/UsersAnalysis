@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Banking Platform{% endblock %}</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='base.css') }}"
+    >
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button
+          class="menu-toggle"
+          type="button"
+          aria-label="Відкрити меню"
+          aria-controls="sidebar"
+          aria-expanded="false"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <a class="brand" href="{{ url_for('index') }}">
+          <span class="brand-mark">BP</span>
+          <span>Banking Platform</span>
+        </a>
+        <div class="topbar-user" aria-label="Поточний користувач">
+          <span class="status-dot"></span>
+          <span>System online</span>
+        </div>
+      </header>
+
+      <div class="app-body">
+        <aside class="sidebar" id="sidebar">
+          <nav class="sidebar-nav" aria-label="Основна навігація">
+            <p class="nav-heading">Workspace</p>
+            <a
+              class="nav-link {% if request.endpoint == 'index' %}is-active{% endif %}"
+              href="{{ url_for('index') }}"
+            >
+              <span class="nav-icon">⌂</span>
+              <span>Dashboard</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'queue_page' %}is-active{% endif %}"
+              href="{{ url_for('queue_page') }}"
+            >
+              <span class="nav-icon">Q</span>
+              <span>Queue</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'transactions_page' %}is-active{% endif %}"
+              href="{{ url_for('transactions_page') }}"
+            >
+              <span class="nav-icon">T</span>
+              <span>Transactions</span>
+            </a>
+
+            <p class="nav-heading">Analysis</p>
+            <a
+              class="nav-link {% if request.endpoint == 'ml_overview_page' %}is-active{% endif %}"
+              href="{{ url_for('ml_overview_page') }}"
+            >
+              <span class="nav-icon">M</span>
+              <span>ML Overview</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'logs_page' %}is-active{% endif %}"
+              href="{{ url_for('logs_page') }}"
+            >
+              <span class="nav-icon">≡</span>
+              <span>Operation log</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'analytics_page' %}is-active{% endif %}"
+              href="{{ url_for('analytics_page') }}"
+            >
+              <span class="nav-icon">▥</span>
+              <span>Analytics</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'products_page' %}is-active{% endif %}"
+              href="{{ url_for('products_page') }}"
+            >
+              <span class="nav-icon">◇</span>
+              <span>ML / Products</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'users_page' %}is-active{% endif %}"
+              href="{{ url_for('users_page') }}"
+            >
+              <span class="nav-icon">U</span>
+              <span>ML / Users</span>
+            </a>
+            <a
+              class="nav-link {% if request.endpoint == 'recommendations_page' %}is-active{% endif %}"
+              href="{{ url_for('recommendations_page') }}"
+            >
+              <span class="nav-icon">★</span>
+              <span>Recommendations</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-footer">
+            <span class="status-dot"></span>
+            <span>All systems operational</span>
+            <span class="product-version">v{{ product_version }}</span>
+          </div>
+        </aside>
+
+        <main class="main-content">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='base.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

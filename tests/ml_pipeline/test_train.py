@@ -14,6 +14,14 @@ class FakeModel:
         self.fit_calls.append((X, y))
         return self
 
+    def predict(self, X):
+        return [0] * len(X)
+
+    def predict_proba(self, X):
+        import numpy as np
+
+        return np.array([[1.0, 0.0] for _ in range(len(X))])
+
 
 def test_train_runs_pipeline_and_saves_artifacts(monkeypatch, tmp_path):
     raw_data = pd.DataFrame({"event_type": ["view"]})
@@ -36,8 +44,8 @@ def test_train_runs_pipeline_and_saves_artifacts(monkeypatch, tmp_path):
     )
     user_clusters = pd.DataFrame({"user_id": [1, 2], "cluster": [0, 1]})
     product_clusters = pd.DataFrame({"product_id": [101, 202], "cluster": [0, 1]})
-    X_train = user_features[["views", "carts"]].iloc[:1]
-    X_test = user_features[["views", "carts"]].iloc[1:]
+    X_train = user_features[["views", "carts", "purchases"]].iloc[:1]
+    X_test = user_features[["views", "carts", "purchases"]].iloc[1:]
     y_train = pd.Series([0])
     y_test = pd.Series([1])
     model = FakeModel()
@@ -110,6 +118,10 @@ def test_train_runs_pipeline_and_saves_artifacts(monkeypatch, tmp_path):
     ]
     assert dump_calls[-1][0]["train_rows"] == 1
     assert dump_calls[-1][0]["test_rows"] == 1
+    assert "model_metrics" in dump_calls[-1][0]
+    assert "class_counts" in dump_calls[-1][0]
+    assert dump_calls[-1][0]["target_definition"] == "purchases >= 1"
+    assert "model_feature_columns" in dump_calls[-1][0]
 
 
 def test_train_prefers_existing_cleaned_data(monkeypatch, tmp_path):
@@ -168,7 +180,7 @@ def test_train_prefers_existing_cleaned_data(monkeypatch, tmp_path):
         train_module,
         "split_data",
         lambda features: (
-            pd.DataFrame({"views": [1], "carts": [0]}),
+            pd.DataFrame({"views": [1], "carts": [0], "purchases": [0]}),
             pd.DataFrame(),
             pd.Series([0]),
             pd.Series(dtype=int),

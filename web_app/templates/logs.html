@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Operation Log — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Audit trail</p>
+    <h1>Operation Log</h1>
+    <p class="page-description">
+      Повна історія операцій із чергою та стеком.
+    </p>
+  </section>
+
+  <article class="panel">
+    <div class="panel-header">
+      <div>
+        <h2>Історія операцій</h2>
+      </div>
+      <div class="panel-actions">
+        <button class="button button--secondary" type="button" data-refresh-logs>
+          ↻ Оновити
+        </button>
+        <div class="export-actions" aria-label="Експорт журналу">
+          <a class="button button--secondary" href="{{ url_for('export_logs_json') }}">
+            ↓ JSON
+          </a>
+          <a class="button button--secondary" href="{{ url_for('export_logs_csv') }}">
+            ↓ CSV
+          </a>
+        </div>
+      </div>
+    </div>
+    <form class="sort-form log-filters" data-log-filters>
+      <label>
+        User ID
+        <input name="user_id" type="search" maxlength="100" placeholder="Наприклад user-1">
+      </label>
+      <label>
+        Операція
+        <select name="operation_type">
+          <option value="">Усі операції</option>
+          <option value="enqueue">enqueue</option>
+          <option value="dequeue">dequeue</option>
+          <option value="push">push</option>
+          <option value="pop">pop</option>
+          <option value="undo">undo</option>
+        </select>
+      </label>
+      <button class="button" type="submit">Застосувати</button>
+      <button class="button button--secondary" type="reset">Скинути</button>
+    </form>
+    <div class="inline-message" data-message-for="logs" role="status"></div>
+    <div class="table-wrapper">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Час</th>
+            <th>User ID</th>
+            <th>Структура</th>
+            <th>Операція</th>
+            <th>Значення</th>
+            <th>Опис</th>
+          </tr>
+        </thead>
+        <tbody data-log-list>
+          <tr><td colspan="6" class="empty-cell">Завантаження журналу…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <button class="button button--secondary load-more" type="button" data-load-more-logs>
+      Завантажити ще 50
+    </button>
+  </article>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+{% endblock %}

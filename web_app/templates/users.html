@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}ML / Users — Banking Platform{% endblock %}
+
+{% block content %}
+  <section class="page-header">
+    <p class="eyebrow">Machine learning</p>
+    <h1>ML / Users</h1>
+    <p class="page-description">
+      User-level features, engagement і кластери користувачів.
+    </p>
+  </section>
+
+  {% if not artifacts_available %}
+    <article class="panel empty-state">
+      <strong>ML-артефакти користувачів ще не створені</strong>
+      <span>Запусти <code>python -m ml_pipeline.train</code>, щоб завантажити user features і кластери.</span>
+    </article>
+  {% else %}
+    <article class="panel">
+      <div class="panel-header">
+        <h2>User features and clusters</h2>
+        <span class="badge">Showing {{ users|length }} users</span>
+      </div>
+      <form class="sort-form" method="get">
+        <label>
+          Engagement
+          <select name="engagement">
+            <option value="">Усі</option>
+            <option value="High" {% if engagement_filter == "High" %}selected{% endif %}>High</option>
+            <option value="Low" {% if engagement_filter == "Low" %}selected{% endif %}>Low</option>
+          </select>
+        </label>
+        <label>
+          Cluster
+          <select name="cluster">
+            <option value="">Усі</option>
+            {% for cluster in cluster_ids %}
+              <option value="{{ cluster }}" {% if cluster_filter == cluster|string %}selected{% endif %}>{{ cluster }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Сортувати за
+          <select name="sort_by">
+            {% for column in ("user_id", "views", "carts", "purchases") %}
+              <option value="{{ column }}" {% if sort_by == column %}selected{% endif %}>{{ column }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          Порядок
+          <select name="order">
+            <option value="asc" {% if order == "asc" %}selected{% endif %}>За зростанням</option>
+            <option value="desc" {% if order == "desc" %}selected{% endif %}>За спаданням</option>
+          </select>
+        </label>
+        <button class="button button--secondary" type="submit">Застосувати</button>
+      </form>
+      <div class="table-wrapper">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>User ID</th>
+              <th>Views</th>
+              <th>Carts</th>
+              <th>Purchases</th>
+              <th>Engagement</th>
+              <th>Cluster</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in users %}
+              <tr>
+                <td>{{ user.user_id }}</td>
+                <td>{{ user.views }}</td>
+                <td>{{ user.carts }}</td>
+                <td>{{ user.purchases }}</td>
+                <td>{{ user.engagement }}</td>
+                <td>{{ user.cluster|default("—", true) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if has_more %}
+        <a class="button button--secondary load-more" href="{{ url_for('users_page', engagement=engagement_filter, cluster=cluster_filter, sort_by=sort_by, order=order, limit=display_limit + 50) }}">
+          Завантажити ще 50
+        </a>
+      {% endif %}
+    </article>
+  {% endif %}
+{% endblock %}

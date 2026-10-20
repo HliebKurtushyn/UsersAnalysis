@@ -1,6 +1,15 @@
 from pathlib import Path
 
 import joblib
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    balanced_accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
 
 from ml_pipeline.clustering import cluster_products, cluster_users
 from ml_pipeline.data_loader import load_data
@@ -10,6 +19,7 @@ from ml_pipeline.feature_engineering import (
     build_user_features,
 )
 from ml_pipeline.modeling import (
+    ENGAGEMENT_FEATURE_COLUMNS,
     build_engagement_target,
     create_model,
     split_data,
@@ -36,6 +46,7 @@ def train() -> dict[str, object]:
     product_features = build_product_features(data)
 
     user_feature_columns = ["views", "carts", "purchases"]
+    model_feature_columns = ENGAGEMENT_FEATURE_COLUMNS.copy()
     product_feature_columns = ["views", "carts", "purchases"]
 
     user_clusters = cluster_users(
@@ -52,6 +63,30 @@ def train() -> dict[str, object]:
     X_train, X_test, y_train, y_test = split_data(user_features)
     model = create_model()
     model.fit(X_train, y_train)
+    if len(y_test):
+        y_pred = model.predict(X_test)
+        model_metrics = {
+            "accuracy": accuracy_score(y_test, y_pred),
+            "balanced_accuracy": (
+                balanced_accuracy_score(y_test, y_pred) if y_test.nunique() > 1 else 0.0
+            ),
+            "precision": precision_score(y_test, y_pred, zero_division=0),
+            "recall": recall_score(y_test, y_pred, zero_division=0),
+            "f1": f1_score(y_test, y_pred, zero_division=0),
+        }
+        if hasattr(model, "predict_proba"):
+            y_score = model.predict_proba(X_test)[:, 1]
+            model_metrics.update(
+                {
+                    "average_precision": average_precision_score(y_test, y_score),
+                    "roc_auc": (
+                        roc_auc_score(y_test, y_score) if y_test.nunique() > 1 else 0.0
+                    ),
+                }
+            )
+    else:
+        model_metrics = {}
+    class_counts = build_engagement_target(user_features).value_counts().to_dict()
 
     ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(model, ARTIFACTS_DIR / "engagement_model.joblib")
@@ -63,11 +98,14 @@ def train() -> dict[str, object]:
         {
             "user_feature_columns": user_feature_columns,
             "product_feature_columns": product_feature_columns,
-            "target_definition": "purchases >= 3",
+            "target_definition": "purchases >= 1",
+            "model_feature_columns": model_feature_columns,
             "target": build_engagement_target(user_features),
             "test_rows": len(X_test),
             "train_rows": len(X_train),
             "test_target": y_test,
+            "model_metrics": model_metrics,
+            "class_counts": class_counts,
         },
         ARTIFACTS_DIR / "metadata.joblib",
     )
