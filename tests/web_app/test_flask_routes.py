@@ -65,6 +65,25 @@ def test_products_page_sorts_features(monkeypatch, tmp_path):
     assert response.data.index(b">202<") < response.data.index(b">101<")
 
 
+def test_products_page_limits_displayed_features(monkeypatch, tmp_path):
+    features = pd.DataFrame(
+        {
+            "product_id": list(range(51)),
+            "views": list(range(51)),
+            "carts": [0] * 51,
+            "purchases": [0] * 51,
+        }
+    )
+    joblib.dump(features, tmp_path / "product_features.joblib")
+    monkeypatch.setattr("web_app.app.ARTIFACTS_DIR", tmp_path)
+
+    response = app.test_client().get("/products")
+
+    assert response.status_code == 200
+    assert b">49<" in response.data
+    assert b">50<" not in response.data
+
+
 def test_users_page_merges_features_and_clusters(monkeypatch, tmp_path):
     features = pd.DataFrame(
         {
@@ -84,6 +103,25 @@ def test_users_page_merges_features_and_clusters(monkeypatch, tmp_path):
     assert response.status_code == 200
     assert b"ML / Users" in response.data
     assert b">2<" in response.data
+
+
+def test_users_page_limits_displayed_features(monkeypatch, tmp_path):
+    features = pd.DataFrame(
+        {
+            "user_id": list(range(51)),
+            "views": [0] * 51,
+            "carts": [0] * 51,
+            "purchases": [0] * 51,
+        }
+    )
+    joblib.dump(features, tmp_path / "user_features.joblib")
+    monkeypatch.setattr("web_app.app.ARTIFACTS_DIR", tmp_path)
+
+    response = app.test_client().get("/users")
+
+    assert response.status_code == 200
+    assert b">49<" in response.data
+    assert b">50<" not in response.data
 
 
 def test_ml_overview_and_recommendations_render_without_artifacts(
@@ -288,6 +326,29 @@ def test_get_operation_logs_filters_by_user_and_operation():
     assert len(logs) == 1
     assert logs[0]["user_id"] == "user-1"
     assert logs[0]["operation_type"] == "enqueue"
+
+
+def test_get_operation_logs_limits_displayed_records():
+    with app.app_context():
+        db.session.add_all(
+            [
+                OperationLog(
+                    user_id="user-1",
+                    structure="queue",
+                    operation_type="enqueue",
+                    value=f"log-{index}",
+                    description="Demo log",
+                )
+                for index in range(51)
+            ]
+        )
+        db.session.commit()
+
+    response = app.test_client().get("/api/logs")
+
+    assert response.status_code == 200
+    logs = response.get_json()["items"]
+    assert len(logs) == 50
 
 
 def test_get_operation_logs_rejects_unknown_operation_type():

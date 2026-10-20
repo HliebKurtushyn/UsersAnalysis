@@ -20,7 +20,7 @@
     <article class="panel">
       <div class="panel-header">
         <h2>User features and clusters</h2>
-        <span class="badge">{{ users|length }} users</span>
+        <span class="badge">Showing {{ users|length }} users</span>
       </div>
       <form class="sort-form" method="get">
         <label>
@@ -83,6 +83,11 @@
           </tbody>
         </table>
       </div>
+      {% if has_more %}
+        <a class="button button--secondary load-more" href="{{ url_for('users_page', engagement=engagement_filter, cluster=cluster_filter, sort_by=sort_by, order=order, limit=display_limit + 50) }}">
+          Завантажити ще 50
+        </a>
+      {% endif %}
     </article>
   {% endif %}
 {% endblock %}

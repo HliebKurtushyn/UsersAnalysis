@@ -9,6 +9,8 @@ const endpointByOperation = {
 const state = {
   queue: [],
   transactions: [],
+  logs: [],
+  logOffset: 0,
 };
 
 function showMessage(target, message, isError = false) {
@@ -96,17 +98,42 @@ function renderLogs(items) {
     .join("");
 }
 
-async function refreshLogs() {
+function logQuery(offset = 0) {
   const filters = document.querySelector("[data-log-filters]");
-  const params = filters
-    ? new URLSearchParams(
-        [...new FormData(filters)].filter(([, value]) => value.trim()),
-      )
-    : null;
-  const query = params ? `?${params.toString()}` : "";
-  const response = await fetch(`/api/logs${query}`);
+  const params = new URLSearchParams(
+    filters
+      ? [...new FormData(filters)].filter(([, value]) => value.trim())
+      : [],
+  );
+  params.set("limit", "50");
+  params.set("offset", String(offset));
+  return params;
+}
+
+async function refreshLogs() {
+  state.logOffset = 0;
+  const response = await fetch(`/api/logs?${logQuery().toString()}`);
   if (!response.ok) throw new Error("Не вдалося завантажити журнал.");
-  renderLogs((await response.json()).items);
+  const result = await response.json();
+  state.logs = result.items;
+  state.logOffset = state.logs.length;
+  renderLogs(state.logs);
+  updateLoadMoreButton(result.has_more);
+}
+
+async function loadMoreLogs() {
+  const response = await fetch(`/api/logs?${logQuery(state.logOffset).toString()}`);
+  if (!response.ok) throw new Error("Не вдалося завантажити журнал.");
+  const result = await response.json();
+  state.logs = [...state.logs, ...result.items];
+  state.logOffset = state.logs.length;
+  renderLogs(state.logs);
+  updateLoadMoreButton(result.has_more);
+}
+
+function updateLoadMoreButton(hasMore) {
+  const button = document.querySelector("[data-load-more-logs]");
+  if (button) button.hidden = !hasMore;
 }
 
 async function handleOperation(event) {
@@ -140,6 +167,10 @@ document.querySelectorAll(".operation-form").forEach((form) => {
 
 document.querySelector("[data-refresh-logs]")?.addEventListener("click", () => {
   refreshLogs().catch((error) => showMessage("logs", error.message, true));
+});
+
+document.querySelector("[data-load-more-logs]")?.addEventListener("click", () => {
+  loadMoreLogs().catch((error) => showMessage("logs", error.message, true));
 });
 
 document.querySelector("[data-log-filters]")?.addEventListener("submit", (event) => {

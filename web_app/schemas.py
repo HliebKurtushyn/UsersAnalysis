@@ -54,6 +54,8 @@ class LogsQuery(BaseModel):
 
     user_id: str | None = Field(default=None, min_length=1, max_length=100)
     operation_type: Literal["enqueue", "dequeue", "push", "pop", "undo"] | None = None
+    limit: int = Field(default=50, gt=0)
+    offset: int = Field(default=0, ge=0)
 
 
 class PrepareDataRequest(BaseModel):

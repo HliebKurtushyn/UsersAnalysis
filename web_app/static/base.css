@@ -459,6 +459,11 @@ h2 {
   overflow-x: auto;
 }
 
+.load-more {
+  display: block;
+  margin: 18px auto 0;
+}
+
 .log-table {
   width: 100%;
   border-collapse: collapse;

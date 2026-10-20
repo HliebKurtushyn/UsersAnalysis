@@ -28,6 +28,15 @@ from .models import OperationLog
 operation_types = ["enqueue", "dequeue", "undo"]
 structures = ["queue", "stack"]
 users = ["user-1", "user-2", "user-3"]
+DISPLAY_LIMIT = 50
+
+
+def _display_limit() -> int:
+    try:
+        return max(1, int(request.args.get("limit", DISPLAY_LIMIT)))
+    except ValueError:
+        return DISPLAY_LIMIT
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -186,6 +195,7 @@ def products_page():
     sort_by = request.args.get("sort_by", "product_id")
     order = request.args.get("order", "asc")
     cluster_filter = request.args.get("cluster", "")
+    display_limit = _display_limit()
     allowed_sort_columns = {
         "product_id",
         "views",
@@ -210,6 +220,10 @@ def products_page():
             }
             products = [row for row in products if row["product_id"] in cluster_ids]
         products.sort(key=lambda row: row.get(sort_by, 0), reverse=order == "desc")
+        has_more = len(products) > display_limit
+        products = products[:display_limit]
+    else:
+        has_more = False
 
     cluster_ids = (
         sorted(product_clusters["cluster"].unique().tolist())
@@ -228,6 +242,8 @@ def products_page():
         order=order,
         cluster_filter=cluster_filter,
         cluster_ids=cluster_ids,
+        display_limit=display_limit,
+        has_more=has_more,
     ), HTTPStatus.OK
 
 
@@ -240,6 +256,7 @@ def users_page():
     engagement_filter = request.args.get("engagement", "")
     sort_by = request.args.get("sort_by", "user_id")
     order = request.args.get("order", "asc")
+    display_limit = _display_limit()
 
     if user_features is not None:
         if user_clusters is not None:
@@ -262,6 +279,10 @@ def users_page():
         if order not in {"asc", "desc"}:
             order = "asc"
         users.sort(key=lambda row: row.get(sort_by, 0), reverse=order == "desc")
+        has_more = len(users) > display_limit
+        users = users[:display_limit]
+    else:
+        has_more = False
 
     cluster_ids = (
         sorted(user_clusters["cluster"].unique().tolist())
@@ -278,6 +299,8 @@ def users_page():
         sort_by=sort_by,
         order=order,
         cluster_ids=cluster_ids,
+        display_limit=display_limit,
+        has_more=has_more,
     ), HTTPStatus.OK
 
 
@@ -479,9 +502,16 @@ def get_operation_logs():
     if params.operation_type is not None:
         query = query.filter_by(operation_type=params.operation_type)
 
-    logs = query.order_by(OperationLog.timestamp.desc()).all()
+    total = query.count()
+    logs = (
+        query.order_by(OperationLog.timestamp.desc())
+        .offset(params.offset)
+        .limit(params.limit)
+        .all()
+    )
     return jsonify(
         {
+            "has_more": params.offset + len(logs) < total,
             "items": [
                 {
                     "id": log.id,
@@ -494,7 +524,7 @@ def get_operation_logs():
                     "is_undone": log.is_undone,
                 }
                 for log in logs
-            ]
+            ],
         }
     ), HTTPStatus.OK
 

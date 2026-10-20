@@ -21,7 +21,7 @@
       <article class="panel">
         <div class="panel-header">
           <h2>Product features</h2>
-          <span class="badge">{{ product_features|length }} products</span>
+          <span class="badge">Showing {{ product_features|length }} products</span>
         </div>
         <form class="sort-form" method="get">
           <label>
@@ -69,6 +69,11 @@
             </tbody>
           </table>
         </div>
+        {% if has_more %}
+          <a class="button button--secondary load-more" href="{{ url_for('products_page', sort_by=sort_by, cluster=cluster_filter, order=order, limit=display_limit + 50) }}">
+            Завантажити ще 50
+          </a>
+        {% endif %}
       </article>
     </section>
   {% endif %}
