@@ -67,7 +67,9 @@ def train() -> dict[str, object]:
         y_pred = model.predict(X_test)
         model_metrics = {
             "accuracy": accuracy_score(y_test, y_pred),
-            "balanced_accuracy": balanced_accuracy_score(y_test, y_pred),
+            "balanced_accuracy": (
+                balanced_accuracy_score(y_test, y_pred) if y_test.nunique() > 1 else 0.0
+            ),
             "precision": precision_score(y_test, y_pred, zero_division=0),
             "recall": recall_score(y_test, y_pred, zero_division=0),
             "f1": f1_score(y_test, y_pred, zero_division=0),
