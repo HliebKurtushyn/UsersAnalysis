@@ -1,11 +1,9 @@
-from datetime import datetime, timezone
 from http import HTTPStatus
 import os
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
 import joblib
-from flask_sqlalchemy import SQLAlchemy
 from ml_pipeline.recommender import top_products
 from ml_pipeline.prepare_data import prepare_data
 from ml_pipeline.train import CLEANED_DATA_PATH, RAW_DATA_PATH, train
@@ -23,20 +21,24 @@ from .schemas import (
 )
 from .structures import Queue, Stack
 from .utils import validate_json_request, validate_query_params
+from .extensions import db
+from .models import OperationLog
 
 
 app = Flask(__name__)
 app.config.from_object(Config)
-DATABASE_PATH = Path(
-    os.environ.get(
-        "BANKING_DATABASE_PATH",
-        Path(__file__).resolve().parent.parent / "instance" / "banking.db",
-    )
+PRODUCTION_DATABASE_PATH = (
+    Path(__file__).resolve().parent.parent / "instance" / "banking.db"
 )
+if os.environ.get("USERS_ANALYSIS_TESTING") == "1":
+    DATABASE_PATH = Path(os.environ["USERS_ANALYSIS_TEST_DATABASE_PATH"])
+    app.config["TESTING"] = True
+else:
+    DATABASE_PATH = PRODUCTION_DATABASE_PATH
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATABASE_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-db = SQLAlchemy(app)
+db.init_app(app)
 
 client_queue = Queue()
 transaction_stack = Stack()
@@ -49,17 +51,6 @@ ML_ARTIFACT_NAMES = (
     "product_clusters",
     "metadata",
 )
-
-
-class OperationLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), nullable=False)
-    structure = db.Column(db.String(20), nullable=False)
-    operation_type = db.Column(db.String(20), nullable=False)
-    value = db.Column(db.String(255), nullable=False)
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    description = db.Column(db.String(255))
-    is_undone = db.Column(db.Boolean, default=False)
 
 
 def log_operation(user_id, structure, operation_type, value, description):
