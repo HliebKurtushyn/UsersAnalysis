@@ -233,6 +233,10 @@ h2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.content-grid--wide {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .stat-card,
 .panel {
   background: var(--color-surface);

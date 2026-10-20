@@ -17,7 +17,7 @@
       <span>Запусти <code>python -m ml_pipeline.train</code>, щоб завантажити product features і кластери.</span>
     </article>
   {% else %}
-    <section class="content-grid">
+    <section class="content-grid content-grid--wide">
       <article class="panel">
         <div class="panel-header">
           <h2>Product features</h2>
@@ -65,22 +65,6 @@
                   <td>{{ product.purchases }}</td>
                   <td>{{ "%.2f"|format(product.conversion_rate * 100) }}%</td>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </article>
-      <article class="panel">
-        <div class="panel-header">
-          <h2>Product clusters</h2>
-          <span class="badge">{{ product_clusters|length }} assignments</span>
-        </div>
-        <div class="table-wrapper">
-          <table class="log-table">
-            <thead><tr><th>Product ID</th><th>Cluster</th></tr></thead>
-            <tbody>
-              {% for product in product_clusters %}
-                <tr><td>{{ product.product_id }}</td><td>{{ product.cluster }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
