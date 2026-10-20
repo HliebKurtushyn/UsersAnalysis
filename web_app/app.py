@@ -25,6 +25,10 @@ from .extensions import db
 from .models import OperationLog
 
 
+operation_types = ["enqueue", "dequeue", "undo"]
+structures = ["queue", "stack"]
+users = ["user-1", "user-2", "user-3"]
+
 app = Flask(__name__)
 app.config.from_object(Config)
 PRODUCTION_DATABASE_PATH = (
