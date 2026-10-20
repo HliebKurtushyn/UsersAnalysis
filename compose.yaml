@@ -1,0 +1,10 @@
+
+services:
+  web:
+    build: .
+    image: user-analysis:0.9.8
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./instance:/app/instance
+    restart: unless-stopped
