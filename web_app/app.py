@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from http import HTTPStatus
+import os
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request
@@ -26,7 +27,14 @@ from .utils import validate_json_request, validate_query_params
 
 app = Flask(__name__)
 app.config.from_object(Config)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///banking.db"
+DATABASE_PATH = Path(
+    os.environ.get(
+        "BANKING_DATABASE_PATH",
+        Path(__file__).resolve().parent.parent / "instance" / "banking.db",
+    )
+)
+DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DATABASE_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
@@ -129,6 +137,30 @@ def export_logs_json():
 
     response = jsonify(data)
     response.headers["Content-Disposition"] = 'attachment; filename="logs.json"'
+
+    return response
+
+
+@app.get("/logs/export/csv")
+def export_logs_csv():
+    logs = OperationLog.query.order_by(OperationLog.timestamp.desc()).all()
+    csv_data = (
+        "id,user_id,structure,operation_type,value,timestamp,description,is_undone\n"
+    )
+
+    for log in logs:
+        csv_data += (
+            f"{log.id},{log.user_id},{log.structure},{log.operation_type},"
+            f"{log.value},{log.timestamp.isoformat() if log.timestamp else ''},"
+            f"{log.description},{log.is_undone}\n"
+        )
+
+    response = app.response_class(
+        response=csv_data,
+        status=HTTPStatus.OK,
+        mimetype="text/csv",
+    )
+    response.headers["Content-Disposition"] = 'attachment; filename="logs.csv"'
 
     return response
 
