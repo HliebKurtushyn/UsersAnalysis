@@ -18,8 +18,16 @@
       </div>
       <div class="panel-actions">
         <button class="button button--secondary" type="button" data-refresh-logs>
-          Оновити
+          ↻ Оновити
         </button>
+        <div class="export-actions" aria-label="Експорт журналу">
+          <a class="button button--secondary" href="{{ url_for('export_logs_json') }}">
+            ↓ JSON
+          </a>
+          <a class="button button--secondary" href="{{ url_for('export_logs_csv') }}">
+            ↓ CSV
+          </a>
+        </div>
       </div>
     </div>
     <form class="sort-form log-filters" data-log-filters>
