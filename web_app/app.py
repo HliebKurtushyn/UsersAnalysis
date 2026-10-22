@@ -323,9 +323,19 @@ def ml_overview_page():
 
 @app.post("/api/ml/train")
 def train_ml_pipeline():
-    train()
+    try:
+        train()
+    except (ValueError, RuntimeError, FileNotFoundError) as exc:
+        return jsonify(
+            {
+                "error": str(exc),
+            }
+        ), HTTPStatus.BAD_REQUEST
+
     return jsonify(
-        {"message": "ML artifacts were recreated successfully."}
+        {
+            "message": "ML artifacts were recreated successfully.",
+        }
     ), HTTPStatus.OK
 
 
