@@ -67,7 +67,7 @@ SQLite, REST API, інтерактивний вебінтерфейс і нев�
 - запускає тести для алгоритмів, структур, ML-модулів і Flask API.
 
 <!-- Скріншот: головна сторінка або dashboard із чергою, стеком і навігацією. -->
-![Dashboard — місце для скриншота](docs/screenshots/dashboard.png)
+![Dashboard — місце для скриншота](docs/images/dashboard.png)
 
 ## Технології
 
@@ -152,7 +152,7 @@ python run.py
 `db.create_all()` створює відсутні таблиці, але не очищає наявні записи.
 
 <!-- Скріншот: сторінка Queue або Transactions із виконаною операцією та повідомленням про успіх. -->
-![Операції з чергою і стеком — місце для скриншота](docs/screenshots/structures.png)
+![Операції з чергою і стеком — місце для скриншота](docs/images/structures.png)
 
 ## ML pipeline
 
@@ -183,7 +183,7 @@ python -m ml_pipeline.train
 кількість рядків.
 
 <!-- Скріншот: ML Overview із готовими артефактами, метриками та кнопками pipeline. -->
-![ML Overview — місце для скриншота](docs/screenshots/ml-overview.png)
+![ML Overview — місце для скриншота](docs/images/ml-overview.png)
 
 ### Артефакти
 
@@ -274,7 +274,7 @@ GET /logs/export/csv
 ```
 
 <!-- Скріншот: Operation Log із фільтрами, кнопками експорту й кнопкою дозавантаження. -->
-![Operation Log — місце для скриншота](docs/screenshots/logs.png)
+![Operation Log — місце для скриншота](docs/images/logs.png)
 
 ### Рекомендації
 
@@ -301,7 +301,7 @@ print(recommendations[["product_id", "views", "purchases"]])
 ```
 
 <!-- Скріншот: сторінка Recommendations із ratio, views і purchases. -->
-![Recommendations — місце для скриншота](docs/screenshots/recommendations.png)
+![Recommendations — місце для скриншота](docs/images/recommendations.png)
 
 ## Структура проєкту
 
@@ -517,6 +517,5 @@ python -m scripts.seed_test_logs --count 100
 - додати PCA-візуалізації кластерів;
 - реалізувати session duration або інші часові ознаки;
 - додати benchmark для власних алгоритмів;
-- винести конфігурацію запуску й production settings з `debug=True`;
 - додати окрему модель або endpoint для прогнозу числової суми транзакцій;
 - доповнити рекомендації фільтрами за ціною та customer segment.
